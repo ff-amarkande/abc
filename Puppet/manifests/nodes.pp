@@ -4,8 +4,11 @@ node basenode {
 
 node /^.*internal$/ inherits basenode {
   case $cfn_roles {
-    /firstfuel/: {
-      include firstfuel
+    /firstfuel-web/: {
+      include firstfuel::web
+    }
+    /firstfuel-app/: {
+      include firstfuel::app
     }
   }
 }
