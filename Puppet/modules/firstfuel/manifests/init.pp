@@ -1,4 +1,4 @@
-class firstfuel {
+class firstfuel::web {
   package { 'gcc-c++': ensure => latest }
   package { make: ensure => latest }
   package { mysql: ensure => latest }
@@ -9,10 +9,16 @@ class firstfuel {
   package { libxml2-devel: ensure => latest }
   package { libyaml-devel: ensure => latest }
   package { subversion: ensure => latest }
+  package { git: ensure => latest }
   package { mod_dav_svn: ensure => latest }
   package { ImageMagick: ensure => latest }
   package { ImageMagick-devel: ensure => latest }
   package { rubygems: ensure => latest }
+  file { 'foo.bar':
+    path => '/etc/foo.bar',
+    ensure => file,
+    source => 'puppet:///modules/firstfuel/foo.bar',
+  }
   exec {
 	"gem install mysql":
 	path => "/bin:/usr/bin",
