@@ -1,178 +1,332 @@
 {
-  "AWSTemplateFormatVersion" : "2010-09-09",
-  
-  "Description": "Bring up a single instance using Puppet, update all packages and apply the NSA Hardning Guidelines to it.",
-  
-  "Parameters" : {
-    "KeyName": {
-      "Type": "String",
-      "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the server"
-    },
-    "PuppetClientSecurityGroup": {
-      "Description" : "The EC2 security group for the instances",
-      "Type": "String"
-    },
-    "PuppetMasterDNSName": {
-      "Description" : "The PuppetMaster DNS name",
-      "Type": "String"
-    },
-    "InstanceType" : {
-      "Description" : "EC2 instance type",
-      "Type" : "String",
-      "Default" : "m1.small",
-      "AllowedValues" : [ "t1.micro","m1.small","m1.medium","m1.large","m1.xlarge","m2.xlarge","m2.2xlarge","m2.4xlarge","c1.medium","c1.xlarge","cc1.4xlarge","cc2.8xlarge","cg1.4xlarge"],
-      "ConstraintDescription" : "must be a valid EC2 instance type."
-    }
-  },
-  
-  "Mappings" : {
-    "AWSInstanceType2Arch" : {
-      "t1.micro"    : { "Arch" : "64" },
-      "m1.small"    : { "Arch" : "64" },
-      "m1.medium"   : { "Arch" : "64" },
-      "m1.large"    : { "Arch" : "64" },
-      "m1.xlarge"   : { "Arch" : "64" },
-      "m2.xlarge"   : { "Arch" : "64" },
-      "m2.2xlarge"  : { "Arch" : "64" },
-      "m2.4xlarge"  : { "Arch" : "64" },
-      "c1.medium"   : { "Arch" : "64" },
-      "c1.xlarge"   : { "Arch" : "64" },
-      "cc1.4xlarge" : { "Arch" : "64HVM" },
-      "cc2.8xlarge" : { "Arch" : "64HVM" },
-      "cg1.4xlarge" : { "Arch" : "64HVM" }
-    },
-
-    "AWSRegionArch2AMI" : {
-      "us-east-1"      : { "32" : "ami-31814f58", "64" : "ami-1b814f72", "64HVM" : "ami-0da96764" },
-      "us-west-2"      : { "32" : "ami-38fe7308", "64" : "ami-30fe7300", "64HVM" : "NOT_YET_SUPPORTED" },
-      "us-west-1"      : { "32" : "ami-11d68a54", "64" : "ami-1bd68a5e", "64HVM" : "NOT_YET_SUPPORTED" },
-      "eu-west-1"      : { "32" : "ami-973b06e3", "64" : "ami-953b06e1", "64HVM" : "NOT_YET_SUPPORTED" },
-      "ap-southeast-1" : { "32" : "ami-b4b0cae6", "64" : "ami-beb0caec", "64HVM" : "NOT_YET_SUPPORTED" },
-      "ap-northeast-1" : { "32" : "ami-0644f007", "64" : "ami-0a44f00b", "64HVM" : "NOT_YET_SUPPORTED" },
-      "sa-east-1"      : { "32" : "ami-3e3be423", "64" : "ami-3c3be421", "64HVM" : "NOT_YET_SUPPORTED" }
-    }
-  },
-    
-  "Resources" : {  
-    "CFNInitUser" : {
-      "Type" : "AWS::IAM::User",
-      "Properties" : {
-        "Policies": [{
-          "PolicyName": "AccessForCFNInit",
-          "PolicyDocument" : {
-            "Statement": [{
-              "Effect"   : "Allow",
-              "Action"   : "cloudformation:DescribeStackResource",
-              "Resource" : "*"
-            }]
-          }
-        }]
-      }
-    },
-
-    "CFNKeys" : {
-      "Type" : "AWS::IAM::AccessKey",
-      "Properties" : {
-        "UserName" : { "Ref": "CFNInitUser" }
-      }
-    },
-
-    "Server": {  
-      "Type": "AWS::EC2::Instance",
-      "Metadata" : {
-        "AWS::CloudFormation::Init" : {
-          "config" : {
-            "packages" : {
-              "yum" : {
-                "puppet"     : [],
-                "ruby-devel" : [],
-                "gcc"        : [],
-                "make"       : [],
-                "rubygems"   : []
-              },
-              "rubygems" : {
-                "json"       : []
-              }
-            },
-            "files" : {
-              "/etc/yum.repos.d/epel.repo" : {
-                "source" : "https://s3.amazonaws.com/cloudformation-examples/enable-epel-on-amazon-linux-ami",
-                "mode"   : "000644",
-                "owner"  : "root",
-                "group"  : "root"
-              },
-              "/etc/puppet/puppet.conf" : {
-                "content" : { "Fn::Join" : ["", [
-                  "[main]\n",
-                  "   logdir=/var/log/puppet\n",
-                  "   rundir=/var/run/puppet\n",
-                  "   ssldir=$vardir/ssl\n",
-                  "   pluginsync=true\n",
-                  "[agent]\n",
-                  "   classfile=$vardir/classes.txt\n",
-                  "   localconfig=$vardir/localconfig\n",
-                  "   server=",{ "Ref" : "PuppetMasterDNSName" },"\n"
-                ]] },
-                "mode" : "000644",
-                "owner" : "root",
-                "group" : "root"
-              }
-            },
-            "services" : {
-              "sysvinit" : {  
-                "puppet" : {
-                  "enabled" : "true",
-                  "ensureRunning" : "true"                
-                }
-              }
-            }
-          }
+    "AWSTemplateFormatVersion":"2010-09-09",
+    "Description":"Bring up a single instance using Puppet, update all packages and apply the NSA Hardning Guidelines to it.",
+    "Parameters":{
+        "KeyName":{
+            "Type":"String",
+            "Description":"Name of an existing EC2 KeyPair to enable SSH access to the server"
         },
-        "Puppet" : {
-          "roles"    : [ "nsa-base" ]
+        "PuppetClientSecurityGroup":{
+            "Description":"The EC2 security group for the instances",
+            "Type":"String"
+        },
+        "PuppetMasterDNSName":{
+            "Description":"The PuppetMaster DNS name",
+            "Type":"String"
+        },
+        "InstanceType":{
+            "Description":"EC2 instance type",
+            "Type":"String",
+            "Default":"m1.small",
+            "AllowedValues":[
+                "t1.micro",
+                "m1.small",
+                "m1.medium",
+                "m1.large",
+                "m1.xlarge",
+                "m2.xlarge",
+                "m2.2xlarge",
+                "m2.4xlarge",
+                "c1.medium",
+                "c1.xlarge",
+                "cc1.4xlarge",
+                "cc2.8xlarge",
+                "cg1.4xlarge"
+            ],
+            "ConstraintDescription":"must be a valid EC2 instance type."
         }
-      },
-      "Properties": {
-        "SecurityGroups": [ { "Ref": "PuppetClientSecurityGroup" }, { "Ref" : "EC2SecurityGroup" } ],
-        "ImageId": { "Fn::FindInMap": [ "AWSRegionArch2AMI", { "Ref": "AWS::Region" }, { "Fn::FindInMap": [ "AWSInstanceType2Arch", { "Ref": "InstanceType" }, "Arch" ] } ]
+    },
+    
+    "Mappings":{
+        "AWSInstanceType2Arch":{
+            "t1.micro":{
+                "Arch":"64"
+            },
+            "m1.small":{
+                "Arch":"64"
+            },
+            "m1.medium":{
+                "Arch":"64"
+            },
+            "m1.large":{
+                "Arch":"64"
+            },
+            "m1.xlarge":{
+                "Arch":"64"
+            },
+            "m2.xlarge":{
+                "Arch":"64"
+            },
+            "m2.2xlarge":{
+                "Arch":"64"
+            },
+            "m2.4xlarge":{
+                "Arch":"64"
+            },
+            "c1.medium":{
+                "Arch":"64"
+            },
+            "c1.xlarge":{
+                "Arch":"64"
+            },
+            "cc1.4xlarge":{
+                "Arch":"64HVM"
+            },
+            "cc2.8xlarge":{
+                "Arch":"64HVM"
+            },
+            "cg1.4xlarge":{
+                "Arch":"64HVM"
+            }
         },
-        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
-          "#!/bin/bash\n",
-          "yum -y upgrade\n",
-
-          "/opt/aws/bin/cfn-init --region ", { "Ref" : "AWS::Region" },
-          "    -s ", { "Ref" : "AWS::StackName" }, " -r Server ",
-          "    --access-key ", { "Ref" : "CFNKeys" },
-          "    --secret-key ", { "Fn::GetAtt" : ["CFNKeys", "SecretAccessKey"]}, "\n",
-          "/opt/aws/bin/cfn-signal -e $? '", { "Ref" : "ApplicationWaitHandle" }, "'\n"
-        ]]}},
-        "KeyName": { "Ref": "KeyName" },
-        "InstanceType": { "Ref": "InstanceType" }
-      }
+        "AWSRegionArch2AMI":{
+            "us-east-1":{
+                "32":"ami-31814f58",
+                "64":"ami-1b814f72",
+                "64HVM":"ami-0da96764"
+            },
+            "us-west-2":{
+                "32":"ami-38fe7308",
+                "64":"ami-30fe7300",
+                "64HVM":"NOT_YET_SUPPORTED"
+            },
+            "us-west-1":{
+                "32":"ami-11d68a54",
+                "64":"ami-1bd68a5e",
+                "64HVM":"NOT_YET_SUPPORTED"
+            },
+            "eu-west-1":{
+                "32":"ami-973b06e3",
+                "64":"ami-953b06e1",
+                "64HVM":"NOT_YET_SUPPORTED"
+            },
+            "ap-southeast-1":{
+                "32":"ami-b4b0cae6",
+                "64":"ami-beb0caec",
+                "64HVM":"NOT_YET_SUPPORTED"
+            },
+            "ap-northeast-1":{
+                "32":"ami-0644f007",
+                "64":"ami-0a44f00b",
+                "64HVM":"NOT_YET_SUPPORTED"
+            },
+            "sa-east-1":{
+                "32":"ami-3e3be423",
+                "64":"ami-3c3be421",
+                "64HVM":"NOT_YET_SUPPORTED"
+            }
+        }
     },
-
-
-    "EC2SecurityGroup" : {
-      "Type" : "AWS::EC2::SecurityGroup",
-      "Properties" : {
-        "GroupDescription" : "Enable HTTP access for Wordpress plus SSH access via port 22",
-        "SecurityGroupIngress" : [
-          {"IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0" }
-        ]
-      }
-    },
-
-    "ApplicationWaitHandle" : {
-      "Type" : "AWS::CloudFormation::WaitConditionHandle"
-    },
-
-    "ApplicationWaitCondition" : {
-      "Type" : "AWS::CloudFormation::WaitCondition",
-      "DependsOn"  : "Server",
-      "Properties" : {
-        "Handle"   : { "Ref" : "ApplicationWaitHandle" },
-        "Timeout"  : "600"
-      }
+    
+    "Resources":{
+        "CFNInitUser":{
+            "Type":"AWS::IAM::User",
+            "Properties":{
+                "Policies":[
+                    {
+                        "PolicyName":"AccessForCFNInit",
+                        "PolicyDocument":{
+                            "Statement":[
+                                {
+                                    "Effect":"Allow",
+                                    "Action":"cloudformation:DescribeStackResource",
+                                    "Resource":"*"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        
+        "CFNKeys":{
+            "Type":"AWS::IAM::AccessKey",
+            "Properties":{
+                "UserName":{
+                    "Ref":"CFNInitUser"
+                }
+            }
+        },
+        
+        "Server":{
+            "Type":"AWS::EC2::Instance",
+            "Metadata":{
+                "AWS::CloudFormation::Init":{
+                    "config":{
+                        "packages":{
+                            "yum":{
+                                "puppet":[
+                                    
+                                ],
+                                "ruby-devel":[
+                                    
+                                ],
+                                "gcc":[
+                                    
+                                ],
+                                "make":[
+                                    
+                                ],
+                                "rubygems":[
+                                    
+                                ]
+                            },
+                            "rubygems":{
+                                "json":[
+                                    
+                                ]
+                            }
+                        },
+                        "files":{
+                            "/etc/yum.repos.d/epel.repo":{
+                                "source":"https://s3.amazonaws.com/cloudformation-examples/enable-epel-on-amazon-linux-ami",
+                                "mode":"000644",
+                                "owner":"root",
+                                "group":"root"
+                            },
+                            "/etc/puppet/puppet.conf":{
+                                "content":{
+                                    "Fn::Join":[
+                                        "",
+                                        [
+                                            "[main]\n",
+                                            "   logdir=/var/log/puppet\n",
+                                            "   rundir=/var/run/puppet\n",
+                                            "   ssldir=$vardir/ssl\n",
+                                            "   pluginsync=true\n",
+                                            "[agent]\n",
+                                            "   classfile=$vardir/classes.txt\n",
+                                            "   localconfig=$vardir/localconfig\n",
+                                            "   server=",
+                                            {
+                                                "Ref":"PuppetMasterDNSName"
+                                            },
+                                            "\n"
+                                        ]
+                                    ]
+                                },
+                                "mode":"000644",
+                                "owner":"root",
+                                "group":"root"
+                            }
+                        },
+                        "services":{
+                            "sysvinit":{
+                                "puppet":{
+                                    "enabled":"true",
+                                    "ensureRunning":"true"
+                                }
+                            }
+                        }
+                    }
+                },
+                "Puppet":{
+                    "roles":[
+                        "nsa-base"
+                    ]
+                }
+            },
+            
+            "Properties":{
+                "SecurityGroups":[
+                    {
+                        "Ref":"PuppetClientSecurityGroup"
+                    },
+                    {
+                        "Ref":"EC2SecurityGroup"
+                    }
+                ],
+                "ImageId":{
+                    "Fn::FindInMap":[
+                        "AWSRegionArch2AMI",
+                        {
+                            "Ref":"AWS::Region"
+                        },
+                        {
+                            "Fn::FindInMap":[
+                                "AWSInstanceType2Arch",
+                                {
+                                    "Ref":"InstanceType"
+                                },
+                                "Arch"
+                            ]
+                        }
+                    ]
+                },
+                "UserData":{
+                    "Fn::Base64":{
+                        "Fn::Join":[
+                            "",
+                            [
+                                "#!/bin/bash\n",
+                                "yum -y upgrade\n",
+                                "/opt/aws/bin/cfn-init --region ",
+                                {
+                                    "Ref":"AWS::Region"
+                                },
+                                "    -s ",
+                                {
+                                    "Ref":"AWS::StackName"
+                                },
+                                " -r Server ",
+                                "    --access-key ",
+                                {
+                                    "Ref":"CFNKeys"
+                                },
+                                "    --secret-key ",
+                                {
+                                    "Fn::GetAtt":[
+                                        "CFNKeys",
+                                        "SecretAccessKey"
+                                    ]
+                                },
+                                "\n",
+                                "/opt/aws/bin/cfn-signal -e $? '",
+                                {
+                                    "Ref":"ApplicationWaitHandle"
+                                },
+                                "'\n"
+                            ]
+                        ]
+                    }
+                },
+                "KeyName":{
+                    "Ref":"KeyName"
+                },
+                "InstanceType":{
+                    "Ref":"InstanceType"
+                }
+            }
+        },
+        
+        "EC2SecurityGroup":{
+            "Type":"AWS::EC2::SecurityGroup",
+            "Properties":{
+                "GroupDescription":"Enable HTTP access for Wordpress plus SSH access via port 22",
+                "SecurityGroupIngress":[
+                    {
+                        "IpProtocol":"tcp",
+                        "FromPort":"22",
+                        "ToPort":"22",
+                        "CidrIp":"0.0.0.0/0"
+                    }
+                ]
+            }
+        },
+        
+        "ApplicationWaitHandle":{
+            "Type":"AWS::CloudFormation::WaitConditionHandle"
+        },
+        
+        "ApplicationWaitCondition":{
+            "Type":"AWS::CloudFormation::WaitCondition",
+            "DependsOn":"Server",
+            "Properties":{
+                "Handle":{
+                    "Ref":"ApplicationWaitHandle"
+                },
+                "Timeout":"600"
+            }
+        }
     }
-  }
 }
