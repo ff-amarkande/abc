@@ -1,0 +1,104 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Resources": {
+    "elbStagingAdmin": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties": {
+        "AvailabilityZones": [
+          "us-east-1b"
+        ],
+        "HealthCheck": {
+          "HealthyThreshold": "2",
+          "Interval": "6",
+          "Target": "HTTP:3000/session/new",
+          "Timeout": "5",
+          "UnhealthyThreshold": "6"
+        },
+        "Instances": [
+          "i-7dfe6119"
+        ],
+        "Listeners": [
+          {
+            "InstancePort": "3000",
+            "LoadBalancerPort": "80",
+            "Protocol": "HTTP",
+            "PolicyNames": [
+
+            ]
+          },
+          {
+            "InstancePort": "3000",
+            "LoadBalancerPort": "443",
+            "Protocol": "HTTPS",
+            "SSLCertificateId": "arn:aws:iam::322663537532:server-certificate/FirstFuel",
+            "PolicyNames": [
+
+            ]
+          }
+        ]
+      }
+    },
+    "elbMDPLoadBalancer": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties": {
+        "AvailabilityZones": [
+          "us-east-1a"
+        ],
+        "HealthCheck": {
+          "HealthyThreshold": "2",
+          "Interval": "6",
+          "Target": "HTTP:3000/status.html",
+          "Timeout": "5",
+          "UnhealthyThreshold": "10"
+        },
+        "Listeners": [
+          {
+            "InstancePort": "3000",
+            "LoadBalancerPort": "443",
+            "Protocol": "HTTPS",
+            "SSLCertificateId": "arn:aws:iam::322663537532:server-certificate/FirstFuel",
+            "PolicyNames": [
+
+            ]
+          },
+          {
+            "InstancePort": "3000",
+            "LoadBalancerPort": "80",
+            "Protocol": "HTTP",
+            "PolicyNames": [
+
+            ]
+          }
+        ]
+      }
+    },
+    "sgMDPWebServer": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "MDP-WebServer",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "3000",
+            "ToPort": "3000",
+            "CidrIp": "0.0.0.0/0"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "3000",
+            "ToPort": "3000",
+            "SourceSecurityGroupName": "amazon-elb-sg",
+            "SourceSecurityGroupOwnerId": "amazon-elb"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ]
+      }
+    }
+  },
+  "Description": ""
+}
