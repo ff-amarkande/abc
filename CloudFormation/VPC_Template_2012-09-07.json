@@ -3,7 +3,7 @@
     "Description":"FirstFuel standard VPC template with VPN and NAT servers	.",
     "Parameters":{
         "SSHKeyName":{
-            "Description":"SSH kry for launched instances",
+            "Description":"SSH key for launched instances",
             "Type":"String",
             "Default":"firstfuel-dev-stephen"
         },
@@ -279,7 +279,7 @@
                 }
             }
         },
-        "OutBoundDynamicPortPublicNetworkAclEntry":{
+        "OutboundDynamicPortPublicNetworkAclEntry":{
             "Type":"AWS::EC2::NetworkAclEntry",
             "Properties":{
                 "NetworkAclId":{
@@ -438,7 +438,7 @@
                 }
             }
         },
-        "OutBoundPrivateNetworkAclEntry":{
+        "OutboundPrivateNetworkAclEntry":{
             "Type":"AWS::EC2::NetworkAclEntry",
             "Properties":{
                 "NetworkAclId":{
