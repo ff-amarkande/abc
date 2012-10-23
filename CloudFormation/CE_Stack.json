@@ -1,3 +1,4 @@
+
 {
     "AWSTemplateFormatVersion":"2010-09-09",
     "Description":"FirstFuel standard VPC template with VPN, NAT, Frontend Admin, Frontend Consumer and Backend servers including two public ELBs and a private ELB.",
@@ -150,7 +151,7 @@
 		"DatabaseSnapshot":{
             "Description":"Snapshot from which to initialize the database",
             "Type":"String",
-            "Default":"staging-2012-03-01"
+            "Default":"rds:staging-2012-10-16-04-41"
         },
 		"S3DeploymentBucket":{
             "Description":"Name of the S3 bucket containing deployments",
@@ -165,15 +166,15 @@
 	"Mappings":{
         "FirstFuelStack":{
             "AdminWebServer":{
-                "AMI":"ami-405ee129",
+                "AMI":"ami-50992739",
                 "InstanceType":"m1.small"
             },
 			"ConsumerWebServer":{
-                "AMI":"ami-7c5ee115",
+                "AMI":"ami-d09927b9",
                 "InstanceType":"m1.small"
             },
             "BackendApplicationServer":{
-                "AMI":"ami-525ee13b",
+                "AMI":"ami-6c70ce05",
                 "InstanceType":"m1.small"
             },
             "Database":{
@@ -891,7 +892,8 @@
                     }
                 ]
             }
-        },        
+        }, 
+				
         "VPNServer":{
             "Type":"AWS::EC2::Instance",
             "Properties":{
@@ -989,6 +991,17 @@
                         "PolicyNames":[
                             "CookieBasedPolicy"
                         ]
+                    },
+					{
+                        "InstancePort":{
+                            "Ref":"AdminWebServerPort"
+                        },
+                        "LoadBalancerPort":"443",
+                        "Protocol":"HTTPS",
+                        "SSLCertificateId":"arn:aws:iam::322663537532:server-certificate/FirstFuel",
+                        "PolicyNames":[
+                            "CookieBasedPolicy"
+                        ]
                     }
                 ],
                 "HealthCheck":{
@@ -996,7 +1009,7 @@
                             [ "HTTP:",{
                                     "Ref":"AdminWebServerPort"
                                 },
-                                "/"
+                                "/old_index.html"
                             ]
                         ]
                     },
@@ -1020,15 +1033,17 @@
                         "FromPort":"80",
                         "ToPort":"80",
                         "CidrIp":"0.0.0.0/0"
-                    }
-                ],
-				"SecurityGroupEgress":[
-                    {
+                    },
+					{
                         "IpProtocol":"tcp",
-                        "FromPort":"80",
-                        "ToPort":"80",
+                        "FromPort":"443",
+                        "ToPort":"443",
                         "CidrIp":"0.0.0.0/0"
                     }
+					
+                ],
+				"SecurityGroupEgress":[
+				{ "IpProtocol" : "tcp", "FromPort" : { "Ref":"AdminWebServerPort" }, "ToPort" : { "Ref":"AdminWebServerPort" }, "CidrIp":"0.0.0.0/0" }                    
                 ]
             }
         },
@@ -1082,12 +1097,12 @@
 			"/mnt/.database.yml":{
                 "content":{ "Fn::Join":["",[   
 					"production:\n",
-					"adapter: mysql\n",
-					"encoding: utf8\n",
-					"database: ", { "Ref":"DatabaseName" },"\n",
-                    "username: ", { "Ref":"DatabaseUser" },"\n",
-                    "password: ", { "Ref":"DatabasePassword" },"\n",
-                    "host: ", { "Fn::GetAtt":[ "DatabaseServer", "Endpoint.Address" ] },"\n"
+					"  adapter: mysql2\n",
+					"  encoding: utf8\n",
+					"  database: ", { "Ref":"DatabaseName" },"\n",
+                    "  username: ", { "Ref":"DatabaseUser" },"\n",
+                    "  password: ", { "Ref":"DatabasePassword" },"\n",
+                    "  host: ", { "Fn::GetAtt":[ "DatabaseServer", "Endpoint.Address" ] },"\n"
                         ]
                     ]
                 },
@@ -1143,11 +1158,12 @@
 			"GroupDescription" : "Allow access from load balancer as well as outbound HTTP and HTTPS traffic",
 			"VpcId" : { "Ref" : "VPC" },
 				"SecurityGroupIngress" : [
-			{ "IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80", "SourceSecurityGroupId" : { "Ref" : "AdminLoadBalancerSecurityGroup" } } ,
+			{ "IpProtocol" : "tcp", "FromPort" : { "Ref":"AdminWebServerPort" }, "ToPort" : { "Ref":"AdminWebServerPort" }, "SourceSecurityGroupId" : { "Ref" : "AdminLoadBalancerSecurityGroup" } } ,
 			{ "IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0" } ],
 				"SecurityGroupEgress" : [
-			{ "IpProtocol" : "tcp", "FromPort" : "80",  "ToPort" : "80",  "CidrIp" : "0.0.0.0/0" } ,
-			{ "IpProtocol" : "tcp", "FromPort" : { "Ref":"DatabasePort" }, "ToPort":{ "Ref":"DatabasePort" },  "CidrIp" : "0.0.0.0/0" }, 			
+			{ "IpProtocol" : "tcp", "FromPort" : { "Ref":"BackendServerPort" },  "ToPort" : { "Ref":"BackendServerPort" },  "CidrIp" : "0.0.0.0/0" },
+			{ "IpProtocol" : "tcp", "FromPort" : { "Ref":"DatabasePort" }, "ToPort":{ "Ref":"DatabasePort" },  "CidrIp" : "0.0.0.0/0" }, 
+			{ "IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80", "CidrIp" : "0.0.0.0/0" },		
 			{ "IpProtocol" : "tcp", "FromPort" : "443", "ToPort" : "443", "CidrIp" : "0.0.0.0/0" } ]
 			}
 		},
@@ -1160,7 +1176,7 @@
 			"DependsOn" : "AdminFleet",
 			"Properties" : {
 			"Handle"  : { "Ref" : "AdminWaitHandle" },
-			"Timeout" : "300",
+			"Timeout" : "900",
 			"Count"   : "1"
 			}
 		},
@@ -1189,11 +1205,11 @@
         "AdminServerCPUAlarmHigh":{
             "Type":"AWS::CloudWatch::Alarm",
             "Properties":{
-                "AlarmDescription":"Scale-up if CPU > 90% for 1 minute",
+                "AlarmDescription":"Scale-up if CPU > 90% for 10 minute",
                 "MetricName":"CPUUtilization",
                 "Namespace":"AWS/EC2",
                 "Statistic":"Average",
-                "Period":"60",
+                "Period":"600",
                 "EvaluationPeriods":"1",
                 "Threshold":"90",
                 "AlarmActions":[
@@ -1270,6 +1286,17 @@
                         "PolicyNames":[
                             "CookieBasedPolicy"
                         ]
+                    },
+					{
+                        "InstancePort":{
+                            "Ref":"ConsumerWebServerPort"
+                        },
+                        "LoadBalancerPort":"443",
+                        "Protocol":"HTTPS",
+                        "SSLCertificateId":"arn:aws:iam::322663537532:server-certificate/FirstFuel",
+                        "PolicyNames":[
+                            "CookieBasedPolicy"
+                        ]
                     }
                 ],
                 "HealthCheck":{
@@ -1277,7 +1304,7 @@
                             [ "HTTP:",{
                                     "Ref":"ConsumerWebServerPort"
                                 },
-                                "/"
+                                "/404.html"
                             ]
                         ]
                     },
@@ -1301,15 +1328,17 @@
                         "FromPort":"80",
                         "ToPort":"80",
                         "CidrIp":"0.0.0.0/0"
-                    }
-                ],
-				"SecurityGroupEgress":[
-                    {
+                    }, 
+					{
                         "IpProtocol":"tcp",
-                        "FromPort":"80",
-                        "ToPort":"80",
+                        "FromPort":"443",
+                        "ToPort":"443",
                         "CidrIp":"0.0.0.0/0"
                     }
+                ],
+				
+				"SecurityGroupEgress":[
+				{ "IpProtocol" : "tcp", "FromPort" : { "Ref":"ConsumerWebServerPort" }, "ToPort" : { "Ref":"ConsumerWebServerPort" }, "CidrIp":"0.0.0.0/0" }                    
                 ]
             }
         },
@@ -1423,12 +1452,13 @@
 			"GroupDescription" : "Allow access from load balancer as well as outbound HTTP and HTTPS traffic",
 			"VpcId" : { "Ref" : "VPC" },
 				"SecurityGroupIngress" : [
-			{ "IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80", "SourceSecurityGroupId" : { "Ref" : "ConsumerLoadBalancerSecurityGroup" } } ,
+			{ "IpProtocol" : "tcp", "FromPort" : { "Ref":"ConsumerWebServerPort" }, "ToPort" : { "Ref":"ConsumerWebServerPort" }, "SourceSecurityGroupId" : { "Ref" : "ConsumerLoadBalancerSecurityGroup" } } ,			
 			{ "IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0" } ],
 				"SecurityGroupEgress" : [
-			{ "IpProtocol" : "tcp", "FromPort" : "80",  "ToPort" : "80",  "CidrIp" : "0.0.0.0/0" } ,
+			{ "IpProtocol" : "tcp", "FromPort" : { "Ref":"BackendServerPort" },  "ToPort" : { "Ref":"BackendServerPort" },  "CidrIp" : "0.0.0.0/0" },
 			{ "IpProtocol" : "tcp", "FromPort" : { "Ref":"DatabasePort" }, "ToPort":{ "Ref":"DatabasePort" },  "CidrIp" : "0.0.0.0/0" }, 			
-			{ "IpProtocol" : "tcp", "FromPort" : "443", "ToPort" : "443", "CidrIp" : "0.0.0.0/0" } ]
+			{ "IpProtocol" : "tcp", "FromPort" : "443", "ToPort" : "443", "CidrIp" : "0.0.0.0/0" },
+			{ "IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80", "CidrIp" : "0.0.0.0/0" }]
 			}
 		},
 		"ConsumerWaitHandle" : {
@@ -1440,7 +1470,7 @@
 			"DependsOn" : "ConsumerFleet",
 			"Properties" : {
 			"Handle"  : { "Ref" : "ConsumerWaitHandle" },
-			"Timeout" : "300",
+			"Timeout" : "900",
 			"Count"   : "1"
 			}
 		},
@@ -1469,11 +1499,11 @@
         "ConsumerServerCPUAlarmHigh":{
             "Type":"AWS::CloudWatch::Alarm",
             "Properties":{
-                "AlarmDescription":"Scale-up if CPU > 90% for 1 minute",
+                "AlarmDescription":"Scale-up if CPU > 90% for 10 minute",
                 "MetricName":"CPUUtilization",
                 "Namespace":"AWS/EC2",
                 "Statistic":"Average",
-                "Period":"60",
+                "Period":"600",
                 "EvaluationPeriods":"1",
                 "Threshold":"90",
                 "AlarmActions":[
@@ -1531,7 +1561,7 @@
                             [ "HTTP:",{
                                     "Ref":"BackendServerPort"
                                 },
-                                "/"
+                                "/healthcheck.html"
                             ]
                         ]
                     },
@@ -1641,7 +1671,7 @@
 			"GroupDescription" : "Allow HTTP access from internal load balancer as well as outbound HTTP and HTTPS traffic",
 			"VpcId" : { "Ref" : "VPC" },
 				"SecurityGroupIngress" : [
-			{ "IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80", "SourceSecurityGroupId" : { "Ref" : "PrivateLoadBalancerSecurityGroup" } } ,
+			{ "IpProtocol" : "tcp", "FromPort" : { "Ref":"BackendServerPort" }, "ToPort" : { "Ref":"BackendServerPort" }, "SourceSecurityGroupId" : { "Ref" : "PrivateLoadBalancerSecurityGroup" } } ,						
 			{ "IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0" } ],
 				"SecurityGroupEgress" : [
 			{ "IpProtocol" : "tcp", "FromPort" : "80",  "ToPort" : "80",  "CidrIp" : "0.0.0.0/0" } ,
@@ -1687,7 +1717,7 @@
         "BackendServerCPUAlarmHigh":{
             "Type":"AWS::CloudWatch::Alarm",
             "Properties":{
-                "AlarmDescription":"Scale-up if CPU > 90% for 1 minute",
+                "AlarmDescription":"Scale-up if CPU > 90% for 10 minute",
                 "MetricName":"CPUUtilization",
                 "Namespace":"AWS/EC2",
                 "Statistic":"Average",
@@ -1801,7 +1831,7 @@
         "DatabaseServer":{
             "Type":"AWS::RDS::DBInstance",
             "Properties":{
-                "DBName":{ "Ref":"DatabaseName" },
+                
                 "AllocatedStorage":{ "Ref":"DatabaseSize" },
                 "DBInstanceClass":{ "Fn::FindInMap":[ "FirstFuelStack", "Database", "InstanceType" ] },
 				"BackupRetentionPeriod" : { "Ref":"DBRetentionPeriod" },
