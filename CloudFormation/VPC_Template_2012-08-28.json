@@ -323,14 +323,46 @@
       }
     },
 
-    "ElasticLoadBalancer" : {
+    "PortalWebElasticLoadBalancer" : {
       "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
       "Properties" : {
         "SecurityGroups" : [ { "Ref" : "LoadBalancerSecurityGroup" } ],
         "Subnets" : [ { "Ref" : "PublicSubnetA" },  { "Ref" : "PublicSubnetB" }],
-        "Listeners" : [ { "LoadBalancerPort" : "80", "InstancePort" : "80", "Protocol" : "HTTP" } ],
+        "Listeners" : [ { "LoadBalancerPort" : "80", "InstancePort" : "3000", "Protocol" : "HTTP" } ],
         "HealthCheck" : {
-          "Target" : "HTTP:80/",
+          "Target" : "HTTP:3000/",
+          "HealthyThreshold" : "3",
+          "UnhealthyThreshold" : "5",
+          "Interval" : "90",
+          "Timeout" : "60"
+        }
+      }
+    },
+
+    "AdminWebElasticLoadBalancer" : {
+      "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties" : {
+        "SecurityGroups" : [ { "Ref" : "LoadBalancerSecurityGroup" } ],
+        "Subnets" : [ { "Ref" : "PublicSubnetA" },  { "Ref" : "PublicSubnetB" }],
+        "Listeners" : [ { "LoadBalancerPort" : "80", "InstancePort" : "3000", "Protocol" : "HTTP" } ],
+        "HealthCheck" : {
+          "Target" : "HTTP:3000/",
+          "HealthyThreshold" : "3",
+          "UnhealthyThreshold" : "5",
+          "Interval" : "90",
+          "Timeout" : "60"
+        }
+      }
+    },
+
+    "BackendElasticLoadBalancer" : {
+      "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties" : {
+        "SecurityGroups" : [ { "Ref" : "LoadBalancerSecurityGroup" } ],
+        "Subnets" : [ { "Ref" : "PublicSubnetA" },  { "Ref" : "PublicSubnetB" }],
+        "Listeners" : [ { "LoadBalancerPort" : "8080", "InstancePort" : "8080", "Protocol" : "HTTP" } ],
+        "HealthCheck" : {
+          "Target" : "HTTP:8080/",
           "HealthyThreshold" : "3",
           "UnhealthyThreshold" : "5",
           "Interval" : "90",
