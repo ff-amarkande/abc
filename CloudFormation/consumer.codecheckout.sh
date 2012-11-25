@@ -3,13 +3,13 @@
 # CloudEnable code checkout script
 #
 # Parameters to retrieve the tarball 
-FRONTEND_CONSUMER_PACKAGE=s3://DEPLOYMENT_BUCKET/frontend-consumer.tar.gz
-FRONTEND_COMMON_PACKAGE=s3://DEPLOYMENT_BUCKET/frontend-common.tar.gz
+FRONTEND_CONSUMER_PACKAGE=s3://DEPLOYMENT_BUCKET/frontend-consumer-20121106-0940.tar.gz
+FRONTEND_COMMON_PACKAGE=s3://DEPLOYMENT_BUCKET/frontend-admin-20121106-0939.tar.gz
 
 ## General Variables
 deploy_date=$(date "+%Y%m%d%H%M%S")
-consumer_app_name=$(basename $FRONTEND_CONSUMER_PACKAGE)
-common_app_name=$(basename $FRONTEND_COMMON_PACKAGE)
+consumer_app_name=frontend-consumer.tar.gz
+common_app_name=frontend-common.tar.gz
 
 consumer_content_dir=/home/ec2-user/customer.firstfuel.com/deployments-consumer
 consumer_current_dir=/home/ec2-user/customer.firstfuel.com/current

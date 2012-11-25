@@ -3,13 +3,13 @@
 # CloudEnable code checkout script
 #
 # Parameters to retrieve the tarball 
-FRONTEND_ADMIN_PACKAGE=s3://DEPLOYMENT_BUCKET/frontend-admin.tar.gz
-FRONTEND_COMMON_PACKAGE=s3://DEPLOYMENT_BUCKET/frontend-common.tar.gz
+FRONTEND_ADMIN_PACKAGE=s3://DEPLOYMENT_BUCKET/frontend-admin-20121106-0939.tar.gz
+FRONTEND_COMMON_PACKAGE=s3://DEPLOYMENT_BUCKET/frontend-admin-20121106-0939.tar.gz
 
 ## General Variables
 deploy_date=$(date "+%Y%m%d%H%M%S")
-admin_app_name=$(basename $FRONTEND_ADMIN_PACKAGE)
-common_app_name=$(basename $FRONTEND_COMMON_PACKAGE)
+admin_app_name=frontend-admin.tar.gz
+common_app_name=frontend-common.tar.gz
 
 admin_content_dir=/home/ec2-user/admin.firstfuel.com/deployments-admin
 admin_current_dir=/home/ec2-user/admin.firstfuel.com/current

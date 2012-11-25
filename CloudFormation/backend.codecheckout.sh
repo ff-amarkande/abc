@@ -3,14 +3,13 @@
 # CloudEnable code checkout script
 #
 # Parameters to retrieve the latest tarball with the source
-APPLICATION_CODE_BUCKET=s3://DEPLOYMENT_BUCKET
 APPLICATION_CODE1=IBLogix.war
 APPLICATION_CODE2=dbmigrator.jar
 APPLICATION_CODE3=deployer.jar
 
 # Other parameters
-DB_SERVER_HOST=XXX_DB_SERVER_HOST_XXX
-FIRSTFUEL_DB_NAME=trunk_master
+DB_SERVER_HOST=`cat /mnt/DB_SERVER_HOST`
+FIRSTFUEL_DB_NAME=production_master
 TRANSFORMATION_DB_NAME=trunk_transformation
 WEB_APPLICATION_PREFIX=firstfuel
 
@@ -72,16 +71,7 @@ ln -nfs $Web_doc_pointer $current_dir
 # Create a health check file
 
 mkdir -p $current_dir/ROOT/
-cat <<EOF> $current_dir/ROOT/healthcheck.html
-<HTML>
- <HEAD>
-  <TITLE>Health Check</TITLE>
- </HEAD>
- <BODY>
-  <H1>Health Check</H1>
- </BODY>
-</HTML>
-EOF
+cp /mnt/healthcheck.html $current_dir/ROOT
 
 # Change the owner of everything to tomcat
 chown -R tomcat:tomcat $deploy_dir
