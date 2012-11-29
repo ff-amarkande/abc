@@ -7,12 +7,17 @@
       "Type" : "String",
       "Default" : "firstfuel-dev-stephen"
     },
+    "VPC10X" : {
+      "Description" : "X for VPC address range 10.X.*.*",
+      "Type" : "Number",
+      "Default" : "123"
+    },
     "AWSAccount" : {
-      "Description" : "Which FirstFuel AWS account are we talking about (dev or prod)",
+      "Description" : "Which FirstFuel AWS account are we talking about (development or production)",
       "Type" : "String",
-      "Default" : "dev",
-      "AllowedValues" : [ "dev", "prod" ],
-      "ConstraintDescription" : "must be either dev or prod."
+      "Default" : "development",
+      "AllowedValues" : [ "development", "production" ],
+      "ConstraintDescription" : "must be either development or production."
     },
     "AdminWebServerPort" : {
       "Description" : "TCP/IP port for the Admin web server",
@@ -37,7 +42,7 @@
     "DatabaseSize" : {
       "Description" : "Database size in GB",
       "Type" : "Number",
-      "Default" : "10"
+      "Default" : "20"
     },
     "DatabaseUser" : {
       "Description" : "Database admin account username",
@@ -60,7 +65,7 @@
     "DatabaseName" : {
       "Description" : "The name of the database to use",
       "Type" : "String",
-      "Default" : "iblogix_production"
+      "Default" : "coal2_master"
     },
     "DBRetentionPeriod" : {
       "Description" : "The number of days the snapshots should be retained",
@@ -69,7 +74,8 @@
     },
     "DatabaseSnapshot" : {
       "Description" : "Snapshot from which to initialize the database",
-      "Type" : "String"
+      "Type" : "String",
+      "Default" : "ss-oil1-rc1-2012-11-28"
     },
     "MultiAZDatabase" : {
       "Default" : "false",
@@ -125,7 +131,7 @@
   "Mappings" : {
     "FirstFuelStack" : {
       "AdminWebServer" : {
-        "AMI" : "ami-98b70cf1"
+        "AMI" : "ami-ed0c8d84"
       },
       "ConsumerWebServer" : {
         "AMI" : "ami-36a8135f"
@@ -135,7 +141,7 @@
       }
     },
     "AccountSpecific" : {
-      "dev" : {
+      "development" : {
         "AccountNumber" : "322663537532",
         "ZoneA" : "us-east-1a",
         "ZoneB" : "us-east-1b",
@@ -146,9 +152,12 @@
         "BackendDeployer" : "deployer-20121106-0939.jar",
         "FrontendAdmin" : "frontend-admin-20121106-0939.tar.gz",
         "FrontendCommon" : "frontend-common-20121106-0940.tar.gz",
-        "FrontendConsumer" : "frontend-consumer-20121106-0940.tar.gz"
+        "FrontendConsumer" : "frontend-consumer-20121106-0940.tar.gz",
+        "FrontendDisaggregation" : "frontend-disaggregation-20121106-0940.tar.gz",
+        "AdminBundle" : "admin-oil1-rc2.tar.bz2",
+        "TransformationDatabase" : "coal2_transformation"
       },
-      "prod" : {
+      "production" : {
         "AccountNumber" : "156625341827",
         "ZoneA" : "us-east-1a",
         "ZoneB" : "us-east-1b",
@@ -159,36 +168,39 @@
         "BackendDeployer" : "deployer-20121106-0939.jar",
         "FrontendAdmin" : "frontend-admin-20121106-0939.tar.gz",
         "FrontendCommon" : "frontend-common-20121106-0940.tar.gz",
-        "FrontendConsumer" : "frontend-consumer-20121106-0940.tar.gz"
+        "FrontendConsumer" : "frontend-consumer-20121106-0940.tar.gz",
+        "FrontendDisaggregation" : "frontend-disaggregation-20121106-0940.tar.gz",
+        "AdminBundle" : "admin-oil1-rc2.tar.bz2",
+        "TransformationDatabase" : "coal2_transformation"
       }
     },
     "SubnetConfig" : {
       "VPC" : {
-        "CIDR" : "10.123.0.0/16"
+        "CIDR" : "0.0/16"
       },
       "PublicSubnetA" : {
-        "CIDR" : "10.123.0.0/24"
+        "CIDR" : "0.0/24"
       },
       "PublicSubnetB" : {
-        "CIDR" : "10.123.1.0/24"
+        "CIDR" : "1.0/24"
       },
       "PublicSubnetC" : {
-        "CIDR" : "10.123.2.0/24"
+        "CIDR" : "2.0/24"
       },
       "PublicSubnetD" : {
-        "CIDR" : "10.123.3.0/24"
+        "CIDR" : "3.0/24"
       },
       "PrivateSubnetA" : {
-        "CIDR" : "10.123.10.0/24"
+        "CIDR" : "10.0/24"
       },
       "PrivateSubnetB" : {
-        "CIDR" : "10.123.11.0/24"
+        "CIDR" : "11.0/24"
       },
       "PrivateSubnetC" : {
-        "CIDR" : "10.123.12.0/24"
+        "CIDR" : "12.0/24"
       },
       "PrivateSubnetD" : {
-        "CIDR" : "10.123.13.0/24"
+        "CIDR" : "13.0/24"
       }
     }
   },
@@ -247,7 +259,11 @@
       "Type" : "AWS::EC2::VPC",
       "Properties" : {
         "CidrBlock" : {
-          "Fn::FindInMap" : [ "SubnetConfig", "VPC", "CIDR" ]
+          "Fn::Join" : [ ".", [ "10", {
+            "Ref" : "VPC10X"
+          }, {
+            "Fn::FindInMap" : [ "SubnetConfig", "VPC", "CIDR" ]
+          } ] ]
         },
         "Tags" : [ {
           "Key" : "Application",
@@ -267,7 +283,11 @@
           "Ref" : "VPC"
         },
         "CidrBlock" : {
-          "Fn::FindInMap" : [ "SubnetConfig", "PublicSubnetA", "CIDR" ]
+          "Fn::Join" : [ ".", [ "10", {
+            "Ref" : "VPC10X"
+          }, {
+            "Fn::FindInMap" : [ "SubnetConfig", "PublicSubnetA", "CIDR" ]
+          } ] ]
         },
         "AvailabilityZone" : {
           "Fn::FindInMap" : [ "AccountSpecific", {
@@ -292,7 +312,11 @@
           "Ref" : "VPC"
         },
         "CidrBlock" : {
-          "Fn::FindInMap" : [ "SubnetConfig", "PublicSubnetB", "CIDR" ]
+          "Fn::Join" : [ ".", [ "10", {
+            "Ref" : "VPC10X"
+          }, {
+            "Fn::FindInMap" : [ "SubnetConfig", "PublicSubnetB", "CIDR" ]
+          } ] ]
         },
         "AvailabilityZone" : {
           "Fn::FindInMap" : [ "AccountSpecific", {
@@ -317,7 +341,11 @@
           "Ref" : "VPC"
         },
         "CidrBlock" : {
-          "Fn::FindInMap" : [ "SubnetConfig", "PublicSubnetC", "CIDR" ]
+          "Fn::Join" : [ ".", [ "10", {
+            "Ref" : "VPC10X"
+          }, {
+            "Fn::FindInMap" : [ "SubnetConfig", "PublicSubnetC", "CIDR" ]
+          } ] ]
         },
         "AvailabilityZone" : {
           "Fn::FindInMap" : [ "AccountSpecific", {
@@ -342,7 +370,11 @@
           "Ref" : "VPC"
         },
         "CidrBlock" : {
-          "Fn::FindInMap" : [ "SubnetConfig", "PublicSubnetD", "CIDR" ]
+          "Fn::Join" : [ ".", [ "10", {
+            "Ref" : "VPC10X"
+          }, {
+            "Fn::FindInMap" : [ "SubnetConfig", "PublicSubnetD", "CIDR" ]
+          } ] ]
         },
         "AvailabilityZone" : {
           "Fn::FindInMap" : [ "AccountSpecific", {
@@ -611,7 +643,11 @@
           "Ref" : "VPC"
         },
         "CidrBlock" : {
-          "Fn::FindInMap" : [ "SubnetConfig", "PrivateSubnetA", "CIDR" ]
+          "Fn::Join" : [ ".", [ "10", {
+            "Ref" : "VPC10X"
+          }, {
+            "Fn::FindInMap" : [ "SubnetConfig", "PrivateSubnetA", "CIDR" ]
+          } ] ]
         },
         "AvailabilityZone" : {
           "Fn::FindInMap" : [ "AccountSpecific", {
@@ -636,7 +672,11 @@
           "Ref" : "VPC"
         },
         "CidrBlock" : {
-          "Fn::FindInMap" : [ "SubnetConfig", "PrivateSubnetB", "CIDR" ]
+          "Fn::Join" : [ ".", [ "10", {
+            "Ref" : "VPC10X"
+          }, {
+            "Fn::FindInMap" : [ "SubnetConfig", "PrivateSubnetB", "CIDR" ]
+          } ] ]
         },
         "AvailabilityZone" : {
           "Fn::FindInMap" : [ "AccountSpecific", {
@@ -661,7 +701,11 @@
           "Ref" : "VPC"
         },
         "CidrBlock" : {
-          "Fn::FindInMap" : [ "SubnetConfig", "PrivateSubnetC", "CIDR" ]
+          "Fn::Join" : [ ".", [ "10", {
+            "Ref" : "VPC10X"
+          }, {
+            "Fn::FindInMap" : [ "SubnetConfig", "PrivateSubnetC", "CIDR" ]
+          } ] ]
         },
         "AvailabilityZone" : {
           "Fn::FindInMap" : [ "AccountSpecific", {
@@ -686,7 +730,11 @@
           "Ref" : "VPC"
         },
         "CidrBlock" : {
-          "Fn::FindInMap" : [ "SubnetConfig", "PrivateSubnetD", "CIDR" ]
+          "Fn::Join" : [ ".", [ "10", {
+            "Ref" : "VPC10X"
+          }, {
+            "Fn::FindInMap" : [ "SubnetConfig", "PrivateSubnetD", "CIDR" ]
+          } ] ]
         },
         "AvailabilityZone" : {
           "Fn::FindInMap" : [ "AccountSpecific", {
@@ -1174,8 +1222,33 @@
       "Type" : "AWS::AutoScaling::LaunchConfiguration",
       "Metadata" : {
         "Comment1" : "Configure the Admin server to respond to requests",
+        "AWS::CloudFormation::Authentication" : {
+          "S3AccessCreds" : {
+            "type" : "S3",
+            "accessKeyId" : {
+              "Ref" : "CfnKeys"
+            },
+            "secretKey" : {
+              "Fn::GetAtt" : [ "CfnKeys", "SecretAccessKey" ]
+            },
+            "buckets" : [ {
+              "Ref" : "S3DeploymentBucket"
+            } ]
+          }
+        },
         "AWS::CloudFormation::Init" : {
           "config" : {
+            "sources" : {
+              "/mnt/applications" : {
+                "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                  "Ref" : "S3DeploymentBucket"
+                }, {
+                  "Fn::FindInMap" : [ "AccountSpecific", {
+                    "Ref" : "AWSAccount"
+                  }, "AdminBundle" ]
+                } ] ]
+              }
+            },
             "files" : {
               "/mnt/.s3cfg" : {
                 "content" : {
@@ -1189,7 +1262,7 @@
                 "owner" : "root",
                 "group" : "root"
               },
-              "/mnt/.database.yml" : {
+              "/mnt/database.yml" : {
                 "content" : {
                   "Fn::Join" : [ "", [ "production:\n", "  adapter: mysql2\n", "  encoding: utf8\n", "  database: ", {
                     "Ref" : "DatabaseName"
@@ -1201,7 +1274,27 @@
                     "Fn::GetAtt" : [ "DatabaseServer", "Endpoint.Address" ]
                   }, "\n" ] ]
                 },
-                "mode" : "000600",
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/settings.yml" : {
+                "content" : {
+                  "Fn::Join" : [ "", [ "production:\n", "  aws_access_id: \"AKIAI72HORYSTPXRN6EQ\"\n", "  aws_secret_key: \"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\"\n", {
+                    "Fn::Join" : [ "", [ "  rest_api_url: \"http://", {
+                    "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
+                  }, ":", {
+                      "Ref" : "BackendServerPort"
+                    }, "/firstfuel/\"\n" ] ]
+                  }, {
+                    "Fn::Join" : [ "", [ "  rest_api_prefix: \"http://", {
+                    "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
+                  }, ":", {
+                      "Ref" : "BackendServerPort"
+                    }, "/firstfuel/rest-resource/\"\n" ] ]
+                  }, "  s3_bucket: \"iblogix/multitenancy/production\"\n", "  s3_folder_path: \"/multitenancy/production\"\n", "  paperclip_command_path: \"/usr/bin/\"\n", "  captcha_key: 6LdAlM0SAAAAAHrNl282SyMae7QEg5rkWHAJNqyB\n", "  jira_url_prefix: \"https://firstfuel.atlassian.net/browse/\"\n", "  smtp_server: \"smtp.gmail.com\"\n", "  smtp_user_name: \"sysuser@firstfuel.com\"\n", "  smtp_pasword: \"$y$bot!@#\"\n" ] ]
+                },
+                "mode" : "000644",
                 "owner" : "root",
                 "group" : "root"
               },
@@ -1213,7 +1306,27 @@
                     "Ref" : "BackendServerPort"
                   }, "\n" ] ]
                 },
-                "mode" : "000600",
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/admin.codecheckout.sh" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "admin.codecheckout.sh" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/ssh_keys" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "ssh_keys" ] ]
+                },
+                "mode" : "000644",
                 "owner" : "root",
                 "group" : "root"
               }
@@ -1238,19 +1351,13 @@
           "Fn::Base64" : {
             "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "yum update -y aws-cfn-bootstrap\n", "# Install s3cmd and configure  Frontend \n", "/opt/aws/bin/cfn-init -s ", {
               "Ref" : "AWS::StackName"
-            }, " -r AdminWebServerLaunchConfig ", "    --access-key ", {
+            }, " -r AdminWebServerLaunchConfig ", " --access-key ", {
               "Ref" : "CfnKeys"
-            }, "    --secret-key ", {
+            }, " --secret-key ", {
               "Fn::GetAtt" : [ "CfnKeys", "SecretAccessKey" ]
-            }, "    --region ", {
+            }, " --region ", {
               "Ref" : "AWS::Region"
-            }, " || error_exit 'Failed to run cfn-init'\n", "#Fetch the code deploy script\n", "yum -y --enablerepo epel install s3cmd\n", "/usr/bin/s3cmd -c /mnt/.s3cfg get s3://", {
-              "Ref" : "S3DeploymentBucket"
-            }, "/admin.codecheckout.sh  /mnt/\n", "#Append additional ssh keys to ec2-user's authorized_keys file\n", "/usr/bin/s3cmd -c /mnt/.s3cfg get s3://", {
-              "Ref" : "S3DeploymentBucket"
-            }, "/ssh_keys  /tmp/ssh_keys\n", "cat /tmp/ssh_keys >> /home/ec2-user/.ssh/authorized_keys\n", "rm -f /tmp/ssh_keys\n", "# Run the code deploy script else throw error\n", "sed -i \"s/DEPLOYMENT_BUCKET/", {
-              "Ref" : "S3DeploymentBucket"
-            }, "/g\" /mnt/admin.codecheckout.sh\n", "/bin/sh /mnt/admin.codecheckout.sh || error_exit 'Failed to complete code checkout'\n", "# All is well so signal success\n", "#/opt/aws/bin/cfn-signal -e 0 -r \"Frontend setup complete\" '", {
+            }, " || error_exit 'Failed to run cfn-init'\n", "/bin/sh -x /mnt/admin.codecheckout.sh || error_exit 'Failed to complete code checkout'\n", "# All is well so signal success\n", "#/opt/aws/bin/cfn-signal -e 0 -r \"Frontend setup complete\" '", {
               "Ref" : "AdminWaitHandle"
             }, "'\n" ] ]
           }
@@ -1533,6 +1640,20 @@
       "Type" : "AWS::AutoScaling::LaunchConfiguration",
       "Metadata" : {
         "Comment1" : "Configure the Consumer server to respond to requests",
+        "AWS::CloudFormation::Authentication" : {
+          "S3AccessCreds" : {
+            "type" : "S3",
+            "accessKeyId" : {
+              "Ref" : "CfnKeys"
+            },
+            "secretKey" : {
+              "Fn::GetAtt" : [ "CfnKeys", "SecretAccessKey" ]
+            },
+            "buckets" : [ {
+              "Ref" : "S3DeploymentBucket"
+            } ]
+          }
+        },
         "AWS::CloudFormation::Init" : {
           "config" : {
             "files" : {
@@ -1759,9 +1880,9 @@
         } ],
         "Subnets" : [ {
           "Ref" : "PrivateSubnetA"
-        },{
+        }, {
           "Ref" : "PrivateSubnetB"
-        },{
+        }, {
           "Ref" : "PrivateSubnetC"
         }, {
           "Ref" : "PrivateSubnetD"
