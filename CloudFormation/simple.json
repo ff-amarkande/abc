@@ -67,6 +67,11 @@
       "Type" : "String",
       "Default" : "coal2_master"
     },
+    "TransformationDatabaseName" : {
+      "Description" : "The name of the database to use",
+      "Type" : "String",
+      "Default" : "coal2_transformation"
+    },
     "DBRetentionPeriod" : {
       "Description" : "The number of days the snapshots should be retained",
       "Type" : "Number",
@@ -131,10 +136,10 @@
   "Mappings" : {
     "FirstFuelStack" : {
       "AdminWebServer" : {
-        "AMI" : "ami-ed0c8d84"
+        "AMI" : "ami-1578f87c"
       },
       "ConsumerWebServer" : {
-        "AMI" : "ami-36a8135f"
+        "AMI" : "ami-1578f87c"
       },
       "BackendApplicationServer" : {
         "AMI" : "ami-78a91211"
@@ -150,12 +155,7 @@
         "BackendWAR" : "IBLogix-20121106-0937.war",
         "BackendDBMigrator" : "dbmigrator-20121106-0938.jar",
         "BackendDeployer" : "deployer-20121106-0939.jar",
-        "FrontendAdmin" : "frontend-admin-20121106-0939.tar.gz",
-        "FrontendCommon" : "frontend-common-20121106-0940.tar.gz",
-        "FrontendConsumer" : "frontend-consumer-20121106-0940.tar.gz",
-        "FrontendDisaggregation" : "frontend-disaggregation-20121106-0940.tar.gz",
-        "AdminBundle" : "admin-oil1-rc2.tar.bz2",
-        "TransformationDatabase" : "coal2_transformation"
+        "AdminBundle" : "admin-oil1-rc3.tar.bz2"
       },
       "production" : {
         "AccountNumber" : "156625341827",
@@ -166,12 +166,7 @@
         "BackendWAR" : "IBLogix-20121106-0937.war",
         "BackendDBMigrator" : "dbmigrator-20121106-0938.jar",
         "BackendDeployer" : "deployer-20121106-0939.jar",
-        "FrontendAdmin" : "frontend-admin-20121106-0939.tar.gz",
-        "FrontendCommon" : "frontend-common-20121106-0940.tar.gz",
-        "FrontendConsumer" : "frontend-consumer-20121106-0940.tar.gz",
-        "FrontendDisaggregation" : "frontend-disaggregation-20121106-0940.tar.gz",
-        "AdminBundle" : "admin-oil1-rc2.tar.bz2",
-        "TransformationDatabase" : "coal2_transformation"
+        "AdminBundle" : "admin-oil1-rc3.tar.bz2"
       }
     },
     "SubnetConfig" : {
@@ -1250,6 +1245,16 @@
               }
             },
             "files" : {
+              "/mnt/nginx.conf" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "nginx.conf" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
               "/mnt/.s3cfg" : {
                 "content" : {
                   "Fn::Join" : [ "", [ "[default]\n", "access_key = ", {
@@ -1298,18 +1303,6 @@
                 "owner" : "root",
                 "group" : "root"
               },
-              "/mnt/.backend.conf" : {
-                "content" : {
-                  "Fn::Join" : [ "", [ {
-                    "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
-                  }, ":", {
-                    "Ref" : "BackendServerPort"
-                  }, "\n" ] ]
-                },
-                "mode" : "000644",
-                "owner" : "root",
-                "group" : "root"
-              },
               "/mnt/admin.codecheckout.sh" : {
                 "source" : {
                   "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
@@ -1349,7 +1342,7 @@
         },
         "UserData" : {
           "Fn::Base64" : {
-            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "yum update -y aws-cfn-bootstrap\n", "# Install s3cmd and configure  Frontend \n", "/opt/aws/bin/cfn-init -s ", {
+            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "yum update -y aws-cfn-bootstrap\n", "/opt/aws/bin/cfn-init -s ", {
               "Ref" : "AWS::StackName"
             }, " -r AdminWebServerLaunchConfig ", " --access-key ", {
               "Ref" : "CfnKeys"
@@ -1357,9 +1350,7 @@
               "Fn::GetAtt" : [ "CfnKeys", "SecretAccessKey" ]
             }, " --region ", {
               "Ref" : "AWS::Region"
-            }, " || error_exit 'Failed to run cfn-init'\n", "/bin/sh -x /mnt/admin.codecheckout.sh || error_exit 'Failed to complete code checkout'\n", "# All is well so signal success\n", "#/opt/aws/bin/cfn-signal -e 0 -r \"Frontend setup complete\" '", {
-              "Ref" : "AdminWaitHandle"
-            }, "'\n" ] ]
+            }, " || exit 1\n", "/bin/sh -x /mnt/admin.codecheckout.sh || exit 1\n" ] ]
           }
         }
       }
@@ -1458,7 +1449,7 @@
     "AdminServerCPUAlarmHigh" : {
       "Type" : "AWS::CloudWatch::Alarm",
       "Properties" : {
-        "AlarmDescription" : "Scale-up if CPU > 90% for 10 minute",
+        "AlarmDescription" : "Scale-up if CPU > 90% for 1 minute",
         "MetricName" : "CPUUtilization",
         "Namespace" : "AWS/EC2",
         "Statistic" : "Average",
@@ -1546,7 +1537,7 @@
           "Target" : {
             "Fn::Join" : [ "", [ "HTTP:", {
               "Ref" : "ConsumerWebServerPort"
-            }, "/404.html" ] ]
+            }, "/session/new" ] ]
           },
           "HealthyThreshold" : "2",
           "UnhealthyThreshold" : "5",
@@ -1679,18 +1670,6 @@
                     "Ref" : "DatabasePassword"
                   }, "\n", "host: ", {
                     "Fn::GetAtt" : [ "DatabaseServer", "Endpoint.Address" ]
-                  }, "\n" ] ]
-                },
-                "mode" : "000600",
-                "owner" : "root",
-                "group" : "root"
-              },
-              "/mnt/.backend.conf" : {
-                "content" : {
-                  "Fn::Join" : [ "", [ {
-                    "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
-                  }, ":", {
-                    "Ref" : "BackendServerPort"
                   }, "\n" ] ]
                 },
                 "mode" : "000600",

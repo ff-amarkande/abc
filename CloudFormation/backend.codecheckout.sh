@@ -9,8 +9,8 @@ APPLICATION_CODE3=deployer.jar
 
 # Other parameters
 DB_SERVER_HOST=`cat /mnt/DB_SERVER_HOST`
-FIRSTFUEL_DB_NAME=production_master
-TRANSFORMATION_DB_NAME=trunk_transformation
+FIRSTFUEL_DB_NAME=coal2_master
+TRANSFORMATION_DB_NAME=coal2_transformation
 WEB_APPLICATION_PREFIX=firstfuel
 
 ## General Variables
