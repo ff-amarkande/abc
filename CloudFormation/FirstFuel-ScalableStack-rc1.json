@@ -100,8 +100,8 @@
       "Description" : "EC2 instance type",
       "Type" : "String",
       "Default" : "m1.small",
-      "AllowedValues" : [ "m1.small", "m1.medium", "m1.large", "m1.xlarge", "m2.xlarge", "m2.2xlarge", "m2.4xlarge", "c1.medium", "c1.xlarge", "cc1.4xlarge", "cc2.8xlarge", "cg1.4xlarge" ],
-      "ConstraintDescription" : "must be a valid EC2 instance type."
+      "AllowedValues" : [ "m1.small", "m1.medium", "m1.large", "m1.xlarge", "m2.4xlarge", "c1.medium" ],
+      "ConstraintDescription" : "must be a valid (and reasonable) EC2 instance type."
     },
     "SSLCertificateName" : {
       "Type" : "String",
@@ -156,7 +156,7 @@
         "BackendDBMigrator" : "dbmigrator-20121106-0938.jar",
         "BackendDeployer" : "deployer-20121106-0939.jar",
         "AdminBundle" : "admin-oil1-rc3.tar.bz2",
-        "ConsumerBundle" : "consumer-oil1-rc3.tar.bz2"
+        "ConsumerBundle" : "consumer-oil1-rc4.tar.bz2"
       },
       "production" : {
         "AccountNumber" : "156625341827",
@@ -168,7 +168,7 @@
         "BackendDBMigrator" : "dbmigrator-20121106-0938.jar",
         "BackendDeployer" : "deployer-20121106-0939.jar",
         "AdminBundle" : "admin-oil1-rc3.tar.bz2",
-        "ConsumerBundle" : "consumer-oil1-rc3.tar.bz2"
+        "ConsumerBundle" : "consumer-oil1-rc4.tar.bz2"
       }
     },
     "SubnetConfig" : {
@@ -1661,6 +1661,16 @@
               }
             },
             "files" : {
+              "/mnt/dummy" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "nginx.conf" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
               "/mnt/nginx.conf" : {
                 "source" : {
                   "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
