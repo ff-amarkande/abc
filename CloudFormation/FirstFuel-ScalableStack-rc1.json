@@ -139,7 +139,7 @@
         "AMI" : "ami-1578f87c"
       },
       "ConsumerWebServer" : {
-        "AMI" : "ami-1578f87c"
+        "AMI" : "ami-a738b8ce"
       },
       "BackendApplicationServer" : {
         "AMI" : "ami-78a91211"
@@ -152,10 +152,11 @@
         "ZoneB" : "us-east-1b",
         "ZoneC" : "us-east-1c",
         "ZoneD" : "us-east-1d",
-        "BackendWAR" : "IBLogix-20121106-0937.war",
+        "BackendWAR" : "IBLogix-oil1-rc3.war",
         "BackendDBMigrator" : "dbmigrator-20121106-0938.jar",
         "BackendDeployer" : "deployer-20121106-0939.jar",
-        "AdminBundle" : "admin-oil1-rc3.tar.bz2"
+        "AdminBundle" : "admin-oil1-rc3.tar.bz2",
+        "ConsumerBundle" : "consumer-oil1-rc3.tar.bz2"
       },
       "production" : {
         "AccountNumber" : "156625341827",
@@ -163,10 +164,11 @@
         "ZoneB" : "us-east-1b",
         "ZoneC" : "us-east-1c",
         "ZoneD" : "us-east-1d",
-        "BackendWAR" : "IBLogix-20121106-0937.war",
+        "BackendWAR" : "IBLogix-oil1-rc3.war",
         "BackendDBMigrator" : "dbmigrator-20121106-0938.jar",
         "BackendDeployer" : "deployer-20121106-0939.jar",
-        "AdminBundle" : "admin-oil1-rc3.tar.bz2"
+        "AdminBundle" : "admin-oil1-rc3.tar.bz2",
+        "ConsumerBundle" : "consumer-oil1-rc3.tar.bz2"
       }
     },
     "SubnetConfig" : {
@@ -1490,7 +1492,7 @@
         "ComparisonOperator" : "LessThanThreshold"
       }
     },
-    "ConsumerWebServerElasticLoadBalancer" : {
+	"ConsumerWebServerElasticLoadBalancer" : {
       "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
       "Properties" : {
         "SecurityGroups" : [ {
@@ -1647,7 +1649,28 @@
         },
         "AWS::CloudFormation::Init" : {
           "config" : {
+            "sources" : {
+              "/mnt/applications" : {
+                "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                  "Ref" : "S3DeploymentBucket"
+                }, {
+                  "Fn::FindInMap" : [ "AccountSpecific", {
+                    "Ref" : "AWSAccount"
+                  }, "ConsumerBundle" ]
+                } ] ]
+              }
+            },
             "files" : {
+              "/mnt/nginx.conf" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "nginx.conf" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
               "/mnt/.s3cfg" : {
                 "content" : {
                   "Fn::Join" : [ "", [ "[default]\n", "access_key = ", {
@@ -1660,19 +1683,59 @@
                 "owner" : "root",
                 "group" : "root"
               },
-              "/mnt/.database.yml" : {
+              "/mnt/database.yml" : {
                 "content" : {
-                  "Fn::Join" : [ "", [ "production:\n", "adapter: mysql\n", "encoding: utf8\n", "database: ", {
+                  "Fn::Join" : [ "", [ "production:\n", "  adapter: mysql2\n", "  encoding: utf8\n", "  database: ", {
                     "Ref" : "DatabaseName"
-                  }, "\n", "username: ", {
+                  }, "\n", "  username: ", {
                     "Ref" : "DatabaseUser"
-                  }, "\n", "password: ", {
+                  }, "\n", "  password: ", {
                     "Ref" : "DatabasePassword"
-                  }, "\n", "host: ", {
+                  }, "\n", "  host: ", {
                     "Fn::GetAtt" : [ "DatabaseServer", "Endpoint.Address" ]
                   }, "\n" ] ]
                 },
-                "mode" : "000600",
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/settings.yml" : {
+                "content" : {
+                  "Fn::Join" : [ "", [ "production:\n", "  aws_access_id: \"AKIAI72HORYSTPXRN6EQ\"\n", "  aws_secret_key: \"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\"\n", {
+                    "Fn::Join" : [ "", [ "  rest_api_url: \"http://", {
+                    "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
+                  }, ":", {
+                      "Ref" : "BackendServerPort"
+                    }, "/firstfuel/\"\n" ] ]
+                  }, {
+                    "Fn::Join" : [ "", [ "  rest_api_prefix: \"http://", {
+                    "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
+                  }, ":", {
+                      "Ref" : "BackendServerPort"
+                    }, "/firstfuel/rest-resource/\"\n" ] ]
+                  }, "  s3_bucket: \"iblogix/multitenancy/production\"\n", "  s3_folder_path: \"/multitenancy/production\"\n", "  paperclip_command_path: \"/usr/bin/\"\n", "  captcha_key: 6LdAlM0SAAAAAHrNl282SyMae7QEg5rkWHAJNqyB\n", "  jira_url_prefix: \"https://firstfuel.atlassian.net/browse/\"\n", "  smtp_server: \"smtp.gmail.com\"\n", "  smtp_user_name: \"sysuser@firstfuel.com\"\n", "  smtp_pasword: \"$y$bot!@#\"\n" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/consumer.codecheckout.sh" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "consumer.codecheckout.sh" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/ssh_keys" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "ssh_keys" ] ]
+                },
+                "mode" : "000644",
                 "owner" : "root",
                 "group" : "root"
               }
@@ -1695,23 +1758,15 @@
         },
         "UserData" : {
           "Fn::Base64" : {
-            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "yum update -y aws-cfn-bootstrap\n", "# Install and configure as  Frontend \n", "/opt/aws/bin/cfn-init -s ", {
+            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "yum update -y aws-cfn-bootstrap\n", "/opt/aws/bin/cfn-init -s ", {
               "Ref" : "AWS::StackName"
             }, " -r ConsumerWebServerLaunchConfig ", "    --access-key ", {
               "Ref" : "CfnKeys"
-            }, "    --secret-key ", {
+            }, " --secret-key ", {
               "Fn::GetAtt" : [ "CfnKeys", "SecretAccessKey" ]
-            }, "    --region ", {
+            }, " --region ", {
               "Ref" : "AWS::Region"
-            }, " || error_exit 'Failed to run cfn-init'\n", "#Fetch the code deploy script\n", "yum -y --enablerepo epel install s3cmd\n", "/usr/bin/s3cmd -c /mnt/.s3cfg get s3://", {
-              "Ref" : "S3DeploymentBucket"
-            }, "/consumer.codecheckout.sh  /mnt/\n", "#Append additional ssh keys to ec2-user's authorized_keys file\n", "/usr/bin/s3cmd -c /mnt/.s3cfg get s3://", {
-              "Ref" : "S3DeploymentBucket"
-            }, "/ssh_keys  /tmp/ssh_keys\n", "cat /tmp/ssh_keys >> /home/ec2-user/.ssh/authorized_keys\n", "rm -f /tmp/ssh_keys\n", "# Run the code deploy script else throw error\n", "sed -i \"s/DEPLOYMENT_BUCKET/", {
-              "Ref" : "S3DeploymentBucket"
-            }, "/g\" /mnt/consumer.codecheckout.sh\n", "/bin/sh /mnt/consumer.codecheckout.sh || error_exit 'Failed to complete code checkout'\n", "# All is well so signal success\n", "#/opt/aws/bin/cfn-signal -e 0 -r \"Frontend setup complete\" '", {
-              "Ref" : "ConsumerWaitHandle"
-            }, "'\n" ] ]
+            }, " || exit 1\n", "/bin/sh -x /mnt/consumer.codecheckout.sh || exit 1\n" ] ]
           }
         }
       }
@@ -1760,13 +1815,13 @@
           "CidrIp" : "0.0.0.0/0"
         }, {
           "IpProtocol" : "tcp",
-          "FromPort" : "443",
-          "ToPort" : "443",
+          "FromPort" : "80",
+          "ToPort" : "80",
           "CidrIp" : "0.0.0.0/0"
         }, {
           "IpProtocol" : "tcp",
-          "FromPort" : "80",
-          "ToPort" : "80",
+          "FromPort" : "443",
+          "ToPort" : "443",
           "CidrIp" : "0.0.0.0/0"
         } ]
       }
@@ -1810,12 +1865,12 @@
     "ConsumerServerCPUAlarmHigh" : {
       "Type" : "AWS::CloudWatch::Alarm",
       "Properties" : {
-        "AlarmDescription" : "Scale-up if CPU > 90% for 10 minute",
+        "AlarmDescription" : "Scale-up if CPU > 90% for 10 minutes",
         "MetricName" : "CPUUtilization",
         "Namespace" : "AWS/EC2",
         "Statistic" : "Average",
-        "Period" : "600",
-        "EvaluationPeriods" : "1",
+        "Period" : "60",
+        "EvaluationPeriods" : "10",
         "Threshold" : "90",
         "AlarmActions" : [ {
           "Ref" : "ConsumerServerScaleUpPolicy"
@@ -1832,13 +1887,13 @@
     "ConsumerServerCPUAlarmLow" : {
       "Type" : "AWS::CloudWatch::Alarm",
       "Properties" : {
-        "AlarmDescription" : "Scale-down if CPU < 70% for 10 minutes",
+        "AlarmDescription" : "Scale-down if CPU < 20% for 10 minutes",
         "MetricName" : "CPUUtilization",
         "Namespace" : "AWS/EC2",
         "Statistic" : "Average",
-        "Period" : "600",
-        "EvaluationPeriods" : "2",
-        "Threshold" : "70",
+        "Period" : "60",
+        "EvaluationPeriods" : "10",
+        "Threshold" : "20",
         "AlarmActions" : [ {
           "Ref" : "ConsumerServerScaleDownPolicy"
         } ],
