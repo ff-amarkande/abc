@@ -1,43 +1,59 @@
 {
-    "AWSTemplateFormatVersion" : "2010-09-09",
-    "Resources" : {
-        "DevelopmentStack" : {
-  	       "Type" : "AWS::CloudFormation::Stack",
-	       "Properties" : {
-	           "TemplateURL" : "https://s3.amazonaws.com/firstfuel-distributions/FirstFuel-CF-Template.v3.json",
-	           "Parameters" : {
-					"KeyName": "cloudenable", 
-					"VPCCidrBlock": "10.110.0.0/16", 
-					"PublicSubnetACidrBlock": "10.110.0.0/24", 
-					"PublicSubnetBCidrBlock": "10.110.1.0/24", 
-					"PublicSubnetCCidrBlock": "10.110.2.0/24", 
-					"PublicSubnetDCidrBlock": "10.110.3.0/24", 
-					"PrivateSubnetACidrBlock": "10.110.10.0/24", 
-					"PrivateSubnetBCidrBlock": "10.110.11.0/24", 
-					"PrivateSubnetCCidrBlock": "10.110.12.0/24", 
-					"PrivateSubnetDCidrBlock": "10.110.13.0/24", 
-					"AvailabilityZoneA": "us-east-1a", 
-					"AvailabilityZoneB": "us-east-1b", 
-					"AvailabilityZoneC": "us-east-1c", 
-					"AvailabilityZoneD": "us-east-1d", 
-					"AdminWebServerPort": "3000", 
-					"ConsumerWebServerPort": "3000", 
-					"BackendServerPort": "8080", 
-					"DatabasePort": "3306", 
-					"DatabaseSize": "20", 
-					"DatabaseUser": "iblogix", 
-					"DatabasePassword": "iblogix123", 
-					"DatabaseName": "iblogix_production", 
-					"DBRetentionPeriod": "3", 
-					"DatabaseSnapshot": "rds:staging-2012-11-15-04-32", 
-					"MultiAZDatabase": "true", 
-					"DBInstanceClass": "db.m1.small", 
-					"InstanceType": "m1.small", 
-					"AccountID": "322663537532", 
-					"SSLCertificateName": "firstfuel.com", 
-					"S3DeploymentBucket": "firstfuel-distributions"	               
-	           }
-   	       }
-        }
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Parameters" : {
+    "TemplateURL" : {
+      "Description" : "URL for main CF template file",
+      "Type" : "String",
+      "Default" : "https://s3.amazonaws.com/firstfuel-synctest/CloudFormation/CE-FirstFuel-CF-Template.v3.json"
+    },
+    "KeyName" : {
+      "Description" : "SSH key for launched instances",
+      "Type" : "String",
+      "Default" : "cloudenable"
     }
+  },
+  "Resources" : {
+    "DevelopmentStack" : {
+      "Type" : "AWS::CloudFormation::Stack",
+      "Properties" : {
+        "TemplateURL" : {
+	  "Ref" : "TemplateURL"
+	},
+        "Parameters" : {
+          "KeyName" : {
+            "Ref" : "KeyName"
+          },
+          "VPCCidrBlock" : "10.110.0.0/16",
+          "PublicSubnetACidrBlock" : "10.110.0.0/24",
+          "PublicSubnetBCidrBlock" : "10.110.1.0/24",
+          "PublicSubnetCCidrBlock" : "10.110.2.0/24",
+          "PublicSubnetDCidrBlock" : "10.110.3.0/24",
+          "PrivateSubnetACidrBlock" : "10.110.10.0/24",
+          "PrivateSubnetBCidrBlock" : "10.110.11.0/24",
+          "PrivateSubnetCCidrBlock" : "10.110.12.0/24",
+          "PrivateSubnetDCidrBlock" : "10.110.13.0/24",
+          "AvailabilityZoneA" : "us-east-1a",
+          "AvailabilityZoneB" : "us-east-1b",
+          "AvailabilityZoneC" : "us-east-1c",
+          "AvailabilityZoneD" : "us-east-1d",
+          "AdminWebServerPort" : "3000",
+          "ConsumerWebServerPort" : "3000",
+          "BackendServerPort" : "8080",
+          "DatabasePort" : "3306",
+          "DatabaseSize" : "20",
+          "DatabaseUser" : "iblogix",
+          "DatabasePassword" : "iblogix123",
+          "DatabaseName" : "iblogix_production",
+          "DBRetentionPeriod" : "3",
+          "DatabaseSnapshot" : "rds:staging-2012-11-15-04-32",
+          "MultiAZDatabase" : "false",
+          "DBInstanceClass" : "db.m1.small",
+          "InstanceType" : "m1.small",
+          "AccountID" : "322663537532",
+          "SSLCertificateName" : "firstfuel.com",
+          "S3DeploymentBucket" : "firstfuel-distributions"
+        }
+      }
+    }
+  }
 }
