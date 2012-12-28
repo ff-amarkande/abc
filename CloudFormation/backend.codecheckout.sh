@@ -40,7 +40,7 @@ cp /mnt/iblogix_dbconfig.properties $deploy_dir/$WEB_APPLICATION_PREFIX/WEB-INF/
 
 # Copy the healthcheck file
 #
-mkdir -p $deply_dir/ROOT/
+mkdir -p $deploy_dir/ROOT/
 cp /mnt/healthcheck.html $deploy_dir/ROOT
 
 # Change the owner of everything to tomcat
