@@ -19,6 +19,11 @@
       "AllowedValues" : [ "development", "production" ],
       "ConstraintDescription" : "must be either development or production."
     },
+    "OperatorEmail" : {
+      "Description" : "Email address (or alias) for scaling event notifications",
+      "Type" : "String",
+      "Default" : "operations@firstfuel.com"
+    },
     "AdminWebServerPort" : {
       "Description" : "TCP/IP port for the Admin web server",
       "Type" : "Number",
@@ -160,7 +165,7 @@
       },
       "production" : {
         "AccountNumber" : "156625341827",
-        "ZoneA" : "us-east-1a",
+        "ZoneA" : "us-east-1e",
         "ZoneB" : "us-east-1b",
         "ZoneC" : "us-east-1c",
         "ZoneD" : "us-east-1d",
@@ -202,6 +207,17 @@
     }
   },
   "Resources" : {
+    "NotificationTopic" : {
+      "Type" : "AWS::SNS::Topic",
+      "Properties" : {
+        "Subscription" : [ {
+          "Endpoint" : {
+            "Ref" : "OperatorEmail"
+          },
+          "Protocol" : "email"
+        } ]
+      }
+    },
     "S3BucketPolicy" : {
       "Type" : "AWS::S3::BucketPolicy",
       "Properties" : {
@@ -1167,6 +1183,12 @@
     "AdminFleet" : {
       "Type" : "AWS::AutoScaling::AutoScalingGroup",
       "Properties" : {
+        "NotificationConfiguration" : {
+          "TopicARN" : {
+            "Ref" : "NotificationTopic"
+          },
+          "NotificationTypes" : [ "autoscaling:EC2_INSTANCE_LAUNCH", "autoscaling:EC2_INSTANCE_LAUNCH_ERROR", "autoscaling:EC2_INSTANCE_TERMINATE", "autoscaling:EC2_INSTANCE_TERMINATE_ERROR" ]
+        },
         "AvailabilityZones" : [ {
           "Fn::GetAtt" : [ "PrivateSubnetA", "AvailabilityZone" ]
         }, {
@@ -1289,14 +1311,14 @@
                 "content" : {
                   "Fn::Join" : [ "", [ "production:\n", "  aws_access_id: \"AKIAI72HORYSTPXRN6EQ\"\n", "  aws_secret_key: \"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\"\n", {
                     "Fn::Join" : [ "", [ "  rest_api_url: \"http://", {
-                    "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
-                  }, ":", {
+                      "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
+                    }, ":", {
                       "Ref" : "BackendServerPort"
                     }, "/firstfuel/\"\n" ] ]
                   }, {
                     "Fn::Join" : [ "", [ "  rest_api_prefix: \"http://", {
-                    "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
-                  }, ":", {
+                      "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
+                    }, ":", {
                       "Ref" : "BackendServerPort"
                     }, "/firstfuel/rest-resource/\"\n" ] ]
                   }, "  s3_bucket: \"iblogix/multitenancy/production\"\n", "  s3_folder_path: \"/multitenancy/production\"\n", "  paperclip_command_path: \"/usr/bin/\"\n", "  captcha_key: 6LdAlM0SAAAAAHrNl282SyMae7QEg5rkWHAJNqyB\n", "  jira_url_prefix: \"https://firstfuel.atlassian.net/browse/\"\n", "  smtp_server: \"smtp.gmail.com\"\n", "  smtp_user_name: \"sysuser@firstfuel.com\"\n", "  smtp_pasword: \"$y$bot!@#\"\n" ] ]
@@ -1492,7 +1514,7 @@
         "ComparisonOperator" : "LessThanThreshold"
       }
     },
-	"ConsumerWebServerElasticLoadBalancer" : {
+    "ConsumerWebServerElasticLoadBalancer" : {
       "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
       "Properties" : {
         "SecurityGroups" : [ {
@@ -1581,6 +1603,12 @@
     "ConsumerFleet" : {
       "Type" : "AWS::AutoScaling::AutoScalingGroup",
       "Properties" : {
+        "NotificationConfiguration" : {
+          "TopicARN" : {
+            "Ref" : "NotificationTopic"
+          },
+          "NotificationTypes" : [ "autoscaling:EC2_INSTANCE_LAUNCH", "autoscaling:EC2_INSTANCE_LAUNCH_ERROR", "autoscaling:EC2_INSTANCE_TERMINATE", "autoscaling:EC2_INSTANCE_TERMINATE_ERROR" ]
+        },
         "AvailabilityZones" : [ {
           "Fn::GetAtt" : [ "PrivateSubnetA", "AvailabilityZone" ]
         }, {
@@ -1713,14 +1741,14 @@
                 "content" : {
                   "Fn::Join" : [ "", [ "production:\n", "  aws_access_id: \"AKIAI72HORYSTPXRN6EQ\"\n", "  aws_secret_key: \"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\"\n", {
                     "Fn::Join" : [ "", [ "  rest_api_url: \"http://", {
-                    "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
-                  }, ":", {
+                      "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
+                    }, ":", {
                       "Ref" : "BackendServerPort"
                     }, "/firstfuel/\"\n" ] ]
                   }, {
                     "Fn::Join" : [ "", [ "  rest_api_prefix: \"http://", {
-                    "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
-                  }, ":", {
+                      "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
+                    }, ":", {
                       "Ref" : "BackendServerPort"
                     }, "/firstfuel/rest-resource/\"\n" ] ]
                   }, "  s3_bucket: \"iblogix/multitenancy/production\"\n", "  s3_folder_path: \"/multitenancy/production\"\n", "  paperclip_command_path: \"/usr/bin/\"\n", "  captcha_key: 6LdAlM0SAAAAAHrNl282SyMae7QEg5rkWHAJNqyB\n", "  jira_url_prefix: \"https://firstfuel.atlassian.net/browse/\"\n", "  smtp_server: \"smtp.gmail.com\"\n", "  smtp_user_name: \"sysuser@firstfuel.com\"\n", "  smtp_pasword: \"$y$bot!@#\"\n" ] ]
@@ -1999,6 +2027,12 @@
     "BackendFleet" : {
       "Type" : "AWS::AutoScaling::AutoScalingGroup",
       "Properties" : {
+        "NotificationConfiguration" : {
+          "TopicARN" : {
+            "Ref" : "NotificationTopic"
+          },
+          "NotificationTypes" : [ "autoscaling:EC2_INSTANCE_LAUNCH", "autoscaling:EC2_INSTANCE_LAUNCH_ERROR", "autoscaling:EC2_INSTANCE_TERMINATE", "autoscaling:EC2_INSTANCE_TERMINATE_ERROR" ]
+        },
         "AvailabilityZones" : [ {
           "Fn::GetAtt" : [ "PrivateSubnetA", "AvailabilityZone" ]
         }, {
@@ -2154,6 +2188,22 @@
                 "content" : {
                   "Fn::GetAtt" : [ "DatabaseServer", "Endpoint.Address" ]
                 },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/FIRSTFUEL_DB_NAME" : {
+                "content" : {
+                    "Ref" : "DatabaseName"
+                  },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/TRANSFORMATION_DB_NAME" : {
+                "content" : {
+                    "Ref" : "TransformationDatabaseName"
+                  },
                 "mode" : "000644",
                 "owner" : "root",
                 "group" : "root"
