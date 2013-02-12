@@ -5,7 +5,7 @@
     "KeyName" : {
       "Description" : "SSH key for launched instances",
       "Type" : "String",
-      "Default" : "firstfuel-dev-qa"
+      "Default" : "firstfuel-prod-qa"
     },
     "VPC10X" : {
       "Description" : "X for VPC address range 10.X.*.*",
@@ -15,7 +15,7 @@
     "AWSAccount" : {
       "Description" : "Which FirstFuel AWS account are we talking about (development or production)",
       "Type" : "String",
-      "Default" : "development",
+      "Default" : "production",
       "AllowedValues" : [ "development", "production" ],
       "ConstraintDescription" : "must be either development or production."
     },
@@ -70,12 +70,12 @@
     "DatabaseName" : {
       "Description" : "The name of the database to use",
       "Type" : "String",
-      "Default" : "qa_master"
+      "Default" : "production_master"
     },
     "TransformationDatabaseName" : {
       "Description" : "The name of the database to use",
       "Type" : "String",
-      "Default" : "qa_transformation"
+      "Default" : "iblogix_transformation"
     },
     "DBRetentionPeriod" : {
       "Description" : "The number of days the snapshots should be retained",
@@ -85,7 +85,7 @@
     "DatabaseSnapshot" : {
       "Description" : "Snapshot from which to initialize the database",
       "Type" : "String",
-      "Default" : "ssqa29jan"
+      "Default" : "rds:multi-tenant-2013-01-31-03-25"
     },
     "MultiAZDatabase" : {
       "Default" : "false",
@@ -118,7 +118,7 @@
     "SSLCertificateName" : {
       "Type" : "String",
       "Description" : "Short name of SSL certificate.",
-      "Default" : "firstfuelsoftware.net-with-ca"
+      "Default" : "firstfuel.com-sep-2013"
     },
     "FleetMin" : {
       "Type" : "Number",
@@ -138,7 +138,7 @@
     "S3DeploymentBucket" : {
       "Description" : "Name of the S3 bucket containing deployments",
       "Type" : "String",
-      "Default" : "firstfuel-ssqa",
+      "Default" : "iblogix",
       "MinLength" : "1",
       "MaxLength" : "41",
       "AllowedPattern" : "[a-zA-Z][-a-zA-Z0-9]*",
@@ -148,13 +148,13 @@
   "Mappings" : {
     "FirstFuelStack" : {
       "AdminWebServer" : {
-        "AMI" : "ami-d5149ebc"
+        "AMI" : "ami-81ff68e8"
       },
       "ConsumerWebServer" : {
-        "AMI" : "ami-a9159fc0"
+        "AMI" : "ami-35d5435c"
       },
       "BackendApplicationServer" : {
-        "AMI" : "ami-693ab000"
+        "AMI" : "ami-71d44218"
       }
     },
     "AccountSpecific" : {
@@ -176,11 +176,10 @@
         "ZoneB" : "us-east-1b",
         "ZoneC" : "us-east-1c",
         "ZoneD" : "us-east-1d",
+        "BackendWAR" : "IBLogix.war",
         "BackendDBMigrator" : "dbmigrator.jar",
         "BackendDeployer" : "deployer.jar",
         "AdminBundle" : "frontend-ssadmin.tar.gz",
-        "CommonBundle" : "frontend-common.tar.gz",
-        "DisaggregationBundle" : "frontend-disaggregation.tar.gz",
         "ConsumerBundle" : "frontend-ssconsumer.tar.gz"
       }
     },
@@ -1023,7 +1022,7 @@
               "Ref" : "CfnKeys"
             }, "\n", "secret_key = ", {
               "Fn::GetAtt" : [ "CfnKeys", "SecretAccessKey" ]
-            }, "\n", "use_https = True\n", "EOF\n", "cd /mnt\n", "wget http://s3.amazonaws.com/firstfuel-ssqa/s3cmd-1.0.1.tar.gz\n", "tar -zxf s3cmd-1.0.1.tar.gz\n", "/mnt/s3cmd-1.0.1/s3cmd -c /mnt/.s3cfg get s3://", {
+            }, "\n", "use_https = True\n", "EOF\n", "cd /mnt\n", "wget http://s3.amazonaws.com/iblogix/s3cmd-1.0.1.tar.gz\n", "tar -zxf s3cmd-1.0.1.tar.gz\n", "/mnt/s3cmd-1.0.1/s3cmd -c /mnt/.s3cfg get s3://", {
               "Ref" : "S3DeploymentBucket"
             }, "/ssh_keys  /tmp/ssh_keys\n", "cat /tmp/ssh_keys >> /root/.ssh/authorized_keys\n", "rm -f /tmp/ssh_keys\n", "#Cleanup the s3cfg file as it is placed in the public subnet\n", "rm -f /mnt/.s3cfg\n" ] ]
           }
@@ -1071,7 +1070,7 @@
               "Ref" : "CfnKeys"
             }, "\n", "secret_key = ", {
               "Fn::GetAtt" : [ "CfnKeys", "SecretAccessKey" ]
-            }, "\n", "use_https = True\n", "EOF\n", "cd /mnt\n", "wget http://s3.amazonaws.com/firstfuel-ssqa/s3cmd-1.0.1.tar.gz\n", "tar -zxf s3cmd-1.0.1.tar.gz\n", "/mnt/s3cmd-1.0.1/s3cmd -c /mnt/.s3cfg get s3://", {
+            }, "\n", "use_https = True\n", "EOF\n", "cd /mnt\n", "wget http://s3.amazonaws.com/iblogix/s3cmd-1.0.1.tar.gz\n", "tar -zxf s3cmd-1.0.1.tar.gz\n", "/mnt/s3cmd-1.0.1/s3cmd -c /mnt/.s3cfg get s3://", {
               "Ref" : "S3DeploymentBucket"
             }, "/ssh_keys  /tmp/ssh_keys\n", "cat /tmp/ssh_keys >> /home/ec2-user/.ssh/authorized_keys\n", "rm -f /tmp/ssh_keys\n", "#Cleanup the s3cfg file as it is placed in the public subnet\n", "rm -f /mnt/.s3cfg\n" ] ]
           }
@@ -1313,10 +1312,10 @@
         "AWS::CloudFormation::Init" : {
           "config" : {
             "sources" : {
-              "/mnt/application" : {
+              "/mnt/applications" : {
                 "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
                   "Ref" : "S3DeploymentBucket"
-                }, "current" ,{
+                }, "builds/env/production/current" ,{
                   "Fn::FindInMap" : [ "AccountSpecific", {
                     "Ref" : "AWSAccount"
                   }, "AdminBundle" ]
@@ -1733,10 +1732,10 @@
         "AWS::CloudFormation::Init" : {
           "config" : {
             "sources" : {
-              "/mnt/application" : {
+              "/mnt/applications" : {
                 "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
                   "Ref" : "S3DeploymentBucket"
-                }, "current" ,{
+                }, "builds/env/production/current" ,{
                   "Fn::FindInMap" : [ "AccountSpecific", {
                     "Ref" : "AWSAccount"
                   }, "ConsumerBundle" ]
@@ -2161,7 +2160,7 @@
                 "source" : {
                   "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
                     "Ref" : "S3DeploymentBucket"
-                  }, "current" ,{
+                  }, "builds/env/production/current" ,{
                     "Fn::FindInMap" : [ "AccountSpecific", {
                       "Ref" : "AWSAccount"
                     }, "BackendWAR" ]
@@ -2175,7 +2174,7 @@
                 "source" : {
                   "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
                     "Ref" : "S3DeploymentBucket"
-                  }, "current" ,{
+                  }, "builds/env/stagingprod/current" ,{
                     "Fn::FindInMap" : [ "AccountSpecific", {
                       "Ref" : "AWSAccount"
                     }, "BackendDBMigrator" ]
@@ -2189,7 +2188,7 @@
                 "source" : {
                   "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
                     "Ref" : "S3DeploymentBucket"
-                  }, "current" ,{
+                  }, "builds/env/stagingprod/current" ,{
                     "Fn::FindInMap" : [ "AccountSpecific", {
                       "Ref" : "AWSAccount"
                     }, "BackendDeployer" ]

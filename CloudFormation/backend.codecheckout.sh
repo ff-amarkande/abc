@@ -5,8 +5,8 @@
 # Parameters to retrieve the latest tarball with the source
 #
 APPLICATION_CODE1=IBLogix.war
-#APPLICATION_CODE2=dbmigrator.jar
-#APPLICATION_CODE3=deployer.jar
+APPLICATION_CODE2=dbmigrator.jar
+APPLICATION_CODE3=deployer.jar
 
 # Other parameters
 #
@@ -23,12 +23,13 @@ cat /mnt/ssh_keys >> ~ec2-user/.ssh/authorized_keys
 #
 deploy_dir=/usr/share/tomcat6/webapps
 
+/etc/init.d/tomcat6 stop
 # Deploy the backend application
 #
 mkdir -p $deploy_dir/$WEB_APPLICATION_PREFIX
 (cd $deploy_dir/$WEB_APPLICATION_PREFIX; unzip /mnt/$APPLICATION_CODE1)
-#cp /mnt/$APPLICATION_CODE2 $deploy_dir
-#cp /mnt/$APPLICATION_CODE3 $deploy_dir
+java -jar /mnt/$APPLICATION_CODE3
+java -jar /mnt/$APPLICATION_CODE2
 
 # Get the database connection properties file and replace the values in it
 #
