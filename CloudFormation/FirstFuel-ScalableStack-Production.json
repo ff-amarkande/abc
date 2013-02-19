@@ -98,7 +98,7 @@
       "Default" : "db.m1.small",
       "Description" : "The database instance type",
       "Type" : "String",
-      "AllowedValues" : [ "db.m1.small", "db.m1.large", "db.m1.xlarge", "db.m2.xlarge", "db.m2.2xlarge", "db.m2.4xlarge" ],
+      "AllowedValues" : [ "db.m1.small", "db.m1.large", "db.m1.medium", "db.m2.xlarge", "db.m2.2xlarge", "db.m2.4xlarge" ],
       "ConstraintDescription" : "must select a valid database instance type."
     },
     "BackEndInstanceType" : {
@@ -1315,7 +1315,7 @@
               "/mnt/applications" : {
                 "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
                   "Ref" : "S3DeploymentBucket"
-                }, "builds/env/production/current" ,{
+                }, "builds/env/scalable_stack/current" ,{
                   "Fn::FindInMap" : [ "AccountSpecific", {
                     "Ref" : "AWSAccount"
                   }, "AdminBundle" ]
@@ -1735,7 +1735,7 @@
               "/mnt/applications" : {
                 "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
                   "Ref" : "S3DeploymentBucket"
-                }, "builds/env/production/current" ,{
+                }, "builds/env/scalable_stack/current" ,{
                   "Fn::FindInMap" : [ "AccountSpecific", {
                     "Ref" : "AWSAccount"
                   }, "ConsumerBundle" ]
@@ -2160,7 +2160,7 @@
                 "source" : {
                   "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
                     "Ref" : "S3DeploymentBucket"
-                  }, "builds/env/production/current" ,{
+                  }, "builds/env/scalable_stack/current" ,{
                     "Fn::FindInMap" : [ "AccountSpecific", {
                       "Ref" : "AWSAccount"
                     }, "BackendWAR" ]
@@ -2174,7 +2174,7 @@
                 "source" : {
                   "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
                     "Ref" : "S3DeploymentBucket"
-                  }, "builds/env/stagingprod/current" ,{
+                  }, "builds/env/scalable_stack/current" ,{
                     "Fn::FindInMap" : [ "AccountSpecific", {
                       "Ref" : "AWSAccount"
                     }, "BackendDBMigrator" ]
@@ -2188,7 +2188,7 @@
                 "source" : {
                   "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
                     "Ref" : "S3DeploymentBucket"
-                  }, "builds/env/stagingprod/current" ,{
+                  }, "builds/env/scalable_stack/current" ,{
                     "Fn::FindInMap" : [ "AccountSpecific", {
                       "Ref" : "AWSAccount"
                     }, "BackendDeployer" ]
