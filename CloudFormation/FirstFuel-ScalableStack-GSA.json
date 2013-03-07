@@ -1,0 +1,2592 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Description" : "FirstFuel standard VPC template with VPN, NAT, Frontend Admin, Frontend Consumer and Backend servers including two public ELBs and a private ELB.",
+  "Parameters" : {
+    "KeyName" : {
+      "Description" : "SSH key for launched instances",
+      "Type" : "String",
+      "Default" : "firstfuel-prod-qa"
+    },
+    "VPC10X" : {
+      "Description" : "X for VPC address range 10.X.*.*",
+      "Type" : "Number",
+      "Default" : "123"
+    },
+    "AWSAccount" : {
+      "Description" : "Which FirstFuel AWS account are we talking about (development or production)",
+      "Type" : "String",
+      "Default" : "production",
+      "AllowedValues" : [ "development", "production" ],
+      "ConstraintDescription" : "must be either development or production."
+    },
+    "OperatorEmail" : {
+      "Description" : "Email address (or alias) for scaling event notifications",
+      "Type" : "String",
+      "Default" : "operations@firstfuel.com"
+    },
+    "AdminWebServerPort" : {
+      "Description" : "TCP/IP port for the Admin web server",
+      "Type" : "Number",
+      "Default" : "3000"
+    },
+    "ConsumerWebServerPort" : {
+      "Description" : "TCP/IP port for the Customer web server",
+      "Type" : "Number",
+      "Default" : "3000"
+    },
+    "BackendServerPort" : {
+      "Description" : "TCP/IP port for the Java application server",
+      "Type" : "Number",
+      "Default" : "8080"
+    },
+    "DatabasePort" : {
+      "Description" : "TCP/IP port number for the database",
+      "Type" : "Number",
+      "Default" : "3306"
+    },
+    "DatabaseSize" : {
+      "Description" : "Database size in GB",
+      "Type" : "Number",
+      "Default" : "20"
+    },
+    "DatabaseUser" : {
+      "Description" : "Database admin account username",
+      "Type" : "String",
+      "Default" : "iblogix",
+      "MinLength" : "1",
+      "MaxLength" : "16",
+      "AllowedPattern" : "[a-zA-Z][a-zA-Z0-9]*",
+      "ConstraintDescription" : "must begin with a letter and contain only alphanumeric characters."
+    },
+    "DatabasePassword" : {
+      "Description" : "Database admin account password",
+      "Type" : "String",
+      "Default" : "iblogix123",
+      "MinLength" : "1",
+      "MaxLength" : "41",
+      "AllowedPattern" : "[a-zA-Z0-9]*",
+      "ConstraintDescription" : "must contain only alphanumeric characters."
+    },
+    "DatabaseName" : {
+      "Description" : "The name of the database to use",
+      "Type" : "String",
+      "Default" : "gsa_master"
+    },
+    "TransformationDatabaseName" : {
+      "Description" : "The name of the database to use",
+      "Type" : "String",
+      "Default" : "gsa_transformation"
+    },
+    "DBRetentionPeriod" : {
+      "Description" : "The number of days the snapshots should be retained",
+      "Type" : "Number",
+      "Default" : "7"
+    },
+    "DatabaseSnapshot" : {
+      "Description" : "Snapshot from which to initialize the database",
+      "Type" : "String",
+      "Default" : "rds:coal1-gsa-2012-06-30-2013-01-31-08-03"
+    },
+    "MultiAZDatabase" : {
+      "Default" : "false",
+      "Description" : "Create a multi-AZ MySQL Amazon RDS database instance",
+      "Type" : "String",
+      "AllowedValues" : [ "true", "false" ],
+      "ConstraintDescription" : "must be either true or false."
+    },
+    "DBInstanceClass" : {
+      "Default" : "db.m1.small",
+      "Description" : "The database instance type",
+      "Type" : "String",
+      "AllowedValues" : [ "db.m1.small", "db.m1.large", "db.m1.xlarge", "db.m2.xlarge", "db.m2.2xlarge", "db.m2.4xlarge" ],
+      "ConstraintDescription" : "must select a valid database instance type."
+    },
+    "BackEndInstanceType" : {
+      "Description" : "EC2 instance type",
+      "Type" : "String",
+      "Default" : "m1.xlarge",
+      "AllowedValues" : [ "m1.small", "m1.medium", "m1.large", "m1.xlarge", "m3.xlarge", "c1.medium" ],
+      "ConstraintDescription" : "must be a valid (and reasonable) EC2 instance type."
+    },
+    "FrontEndInstanceType" : {
+          "Description" : "EC2 instance type",
+          "Type" : "String",
+          "Default" : "m1.medium",
+          "AllowedValues" : [ "m1.small", "m1.medium", "m1.large", "m1.xlarge", "m2.4xlarge", "c1.medium" ],
+          "ConstraintDescription" : "must be a valid (and reasonable) EC2 instance type."
+    },
+    "SSLCertificateName" : {
+      "Type" : "String",
+      "Description" : "Short name of SSL certificate.",
+      "Default" : "firstfuel.com-sep-2013"
+    },
+    "FleetMin" : {
+      "Type" : "Number",
+      "Description" : "Minimum number of instances in a fleet.",
+      "Default" : "1"
+    },
+    "FleetMax" : {
+      "Type" : "Number",
+      "Description" : "Maximum number of instances in a fleet.",
+      "Default" : "3"
+    },
+    "FleetDesired" : {
+      "Type" : "Number",
+      "Description" : "Desired number of instances in a fleet.",
+      "Default" : "1"
+    },
+    "S3DeploymentBucket" : {
+      "Description" : "Name of the S3 bucket containing deployments",
+      "Type" : "String",
+      "Default" : "iblogix",
+      "MinLength" : "1",
+      "MaxLength" : "41",
+      "AllowedPattern" : "[a-zA-Z][-a-zA-Z0-9]*",
+      "ConstraintDescription" : "must contain only alphanumeric characters and dashes."
+    }
+  },
+  "Mappings" : {
+    "FirstFuelStack" : {
+      "AdminWebServer" : {
+        "AMI" : "ami-6b0e9a02"
+      },
+      "ConsumerWebServer" : {
+        "AMI" : "ami-210e9a48"
+      },
+      "BackendApplicationServer" : {
+        "AMI" : "ami-ab0d99c2"
+      }
+    },
+    "AccountSpecific" : {
+      "development" : {
+        "AccountNumber" : "322663537532",
+        "ZoneA" : "us-east-1a",
+        "ZoneB" : "us-east-1b",
+        "ZoneC" : "us-east-1c",
+        "ZoneD" : "us-east-1d",
+        "BackendWAR" : "IBLogix.war",
+        "BackendDBMigrator" : "dbmigrator.jar",
+        "BackendDeployer" : "deployer.jar",
+        "AdminBundle" : "frontend-ssadmin.tar.gz",
+        "CommonBundle" : "frontend-common.tar.gz",
+        "DisaggregationBundle" : "frontend-disaggregation.tar.gz",
+        "ConsumerBundle" : "frontend-ssconsumer.tar.gz"
+      },
+      "production" : {
+        "AccountNumber" : "156625341827",
+        "ZoneA" : "us-east-1e",
+        "ZoneB" : "us-east-1b",
+        "ZoneC" : "us-east-1c",
+        "ZoneD" : "us-east-1d",
+        "BackendWAR" : "IBLogix.war",
+        "BackendDBMigrator" : "dbmigrator.jar",
+        "BackendDeployer" : "deployer.jar",
+        "AdminBundle" : "frontend-ssadmin.tar.gz",
+        "ConsumerBundle" : "frontend-ssconsumer.tar.gz"
+      }
+    },
+    "SubnetConfig" : {
+      "VPC" : {
+        "CIDR" : "0.0/16"
+      },
+      "PublicSubnetA" : {
+        "CIDR" : "0.0/24"
+      },
+      "PublicSubnetB" : {
+        "CIDR" : "1.0/24"
+      },
+      "PublicSubnetC" : {
+        "CIDR" : "2.0/24"
+      },
+      "PublicSubnetD" : {
+        "CIDR" : "3.0/24"
+      },
+      "PrivateSubnetA" : {
+        "CIDR" : "10.0/24"
+      },
+      "PrivateSubnetB" : {
+        "CIDR" : "11.0/24"
+      },
+      "PrivateSubnetC" : {
+        "CIDR" : "12.0/24"
+      },
+      "PrivateSubnetD" : {
+        "CIDR" : "13.0/24"
+      }
+    }
+  },
+  "Resources" : {
+    "NotificationTopic" : {
+      "Type" : "AWS::SNS::Topic",
+      "Properties" : {
+        "Subscription" : [ {
+          "Endpoint" : {
+            "Ref" : "OperatorEmail"
+          },
+          "Protocol" : "email"
+        } ]
+      }
+    },
+    "S3BucketPolicy" : {
+      "Type" : "AWS::S3::BucketPolicy",
+      "Properties" : {
+        "PolicyDocument" : {
+          "Id" : "Give deployment bucket access to CfnUser",
+          "Statement" : [ {
+            "Sid" : "ReadAccess",
+            "Action" : [ "s3:GetObject" ],
+            "Effect" : "Allow",
+            "Resource" : {
+              "Fn::Join" : [ "", [ "arn:aws:s3:::", {
+                "Ref" : "S3DeploymentBucket"
+              }, "/*" ] ]
+            },
+            "Principal" : {
+              "AWS" : {
+                "Fn::GetAtt" : [ "CfnUser", "Arn" ]
+              }
+            }
+          } ]
+        },
+        "Bucket" : {
+          "Ref" : "S3DeploymentBucket"
+        }
+      }
+    },
+    "CfnUser" : {
+      "Type" : "AWS::IAM::User",
+      "Properties" : {
+        "Path" : "/",
+        "Policies" : [ {
+          "PolicyName" : "root",
+          "PolicyDocument" : {
+            "Statement" : [ {
+              "Effect" : "Allow",
+              "Action" : [ "cloudformation:DescribeStackResource", "s3:GetObject" ],
+              "Resource" : "*"
+            } ]
+          }
+        } ]
+      }
+    },
+    "CfnKeys" : {
+      "Type" : "AWS::IAM::AccessKey",
+      "Properties" : {
+        "UserName" : {
+          "Ref" : "CfnUser"
+        }
+      }
+    },
+    "VPC" : {
+      "Type" : "AWS::EC2::VPC",
+      "Properties" : {
+        "CidrBlock" : {
+          "Fn::Join" : [ ".", [ "10", {
+            "Ref" : "VPC10X"
+          }, {
+            "Fn::FindInMap" : [ "SubnetConfig", "VPC", "CIDR" ]
+          } ] ]
+        },
+        "Tags" : [ {
+          "Key" : "Application",
+          "Value" : {
+            "Ref" : "AWS::StackName"
+          }
+        }, {
+          "Key" : "Network",
+          "Value" : "Public"
+        } ]
+      }
+    },
+    "PublicSubnetA" : {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties" : {
+        "VpcId" : {
+          "Ref" : "VPC"
+        },
+        "CidrBlock" : {
+          "Fn::Join" : [ ".", [ "10", {
+            "Ref" : "VPC10X"
+          }, {
+            "Fn::FindInMap" : [ "SubnetConfig", "PublicSubnetA", "CIDR" ]
+          } ] ]
+        },
+        "AvailabilityZone" : {
+          "Fn::FindInMap" : [ "AccountSpecific", {
+            "Ref" : "AWSAccount"
+          }, "ZoneA" ]
+        },
+        "Tags" : [ {
+          "Key" : "Application",
+          "Value" : {
+            "Ref" : "AWS::StackName"
+          }
+        }, {
+          "Key" : "Network",
+          "Value" : "Public Subnet A"
+        } ]
+      }
+    },
+    "PublicSubnetB" : {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties" : {
+        "VpcId" : {
+          "Ref" : "VPC"
+        },
+        "CidrBlock" : {
+          "Fn::Join" : [ ".", [ "10", {
+            "Ref" : "VPC10X"
+          }, {
+            "Fn::FindInMap" : [ "SubnetConfig", "PublicSubnetB", "CIDR" ]
+          } ] ]
+        },
+        "AvailabilityZone" : {
+          "Fn::FindInMap" : [ "AccountSpecific", {
+            "Ref" : "AWSAccount"
+          }, "ZoneB" ]
+        },
+        "Tags" : [ {
+          "Key" : "Application",
+          "Value" : {
+            "Ref" : "AWS::StackName"
+          }
+        }, {
+          "Key" : "Network",
+          "Value" : "Public Subnet B"
+        } ]
+      }
+    },
+    "PublicSubnetC" : {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties" : {
+        "VpcId" : {
+          "Ref" : "VPC"
+        },
+        "CidrBlock" : {
+          "Fn::Join" : [ ".", [ "10", {
+            "Ref" : "VPC10X"
+          }, {
+            "Fn::FindInMap" : [ "SubnetConfig", "PublicSubnetC", "CIDR" ]
+          } ] ]
+        },
+        "AvailabilityZone" : {
+          "Fn::FindInMap" : [ "AccountSpecific", {
+            "Ref" : "AWSAccount"
+          }, "ZoneC" ]
+        },
+        "Tags" : [ {
+          "Key" : "Application",
+          "Value" : {
+            "Ref" : "AWS::StackName"
+          }
+        }, {
+          "Key" : "Network",
+          "Value" : "Public Subnet C"
+        } ]
+      }
+    },
+    "PublicSubnetD" : {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties" : {
+        "VpcId" : {
+          "Ref" : "VPC"
+        },
+        "CidrBlock" : {
+          "Fn::Join" : [ ".", [ "10", {
+            "Ref" : "VPC10X"
+          }, {
+            "Fn::FindInMap" : [ "SubnetConfig", "PublicSubnetD", "CIDR" ]
+          } ] ]
+        },
+        "AvailabilityZone" : {
+          "Fn::FindInMap" : [ "AccountSpecific", {
+            "Ref" : "AWSAccount"
+          }, "ZoneD" ]
+        },
+        "Tags" : [ {
+          "Key" : "Application",
+          "Value" : {
+            "Ref" : "AWS::StackName"
+          }
+        }, {
+          "Key" : "Network",
+          "Value" : "Public Subnet D"
+        } ]
+      }
+    },
+    "InternetGateway" : {
+      "Type" : "AWS::EC2::InternetGateway",
+      "Properties" : {
+        "Tags" : [ {
+          "Key" : "Application",
+          "Value" : {
+            "Ref" : "AWS::StackName"
+          }
+        }, {
+          "Key" : "Network",
+          "Value" : "Public"
+        } ]
+      }
+    },
+    "AttachGateway" : {
+      "Type" : "AWS::EC2::VPCGatewayAttachment",
+      "Properties" : {
+        "VpcId" : {
+          "Ref" : "VPC"
+        },
+        "InternetGatewayId" : {
+          "Ref" : "InternetGateway"
+        }
+      }
+    },
+    "PublicRouteTable" : {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId" : {
+          "Ref" : "VPC"
+        },
+        "Tags" : [ {
+          "Key" : "Application",
+          "Value" : {
+            "Ref" : "AWS::StackName"
+          }
+        }, {
+          "Key" : "Network",
+          "Value" : "Public"
+        } ]
+      }
+    },
+    "PublicRoute" : {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "RouteTableId" : {
+          "Ref" : "PublicRouteTable"
+        },
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "GatewayId" : {
+          "Ref" : "InternetGateway"
+        }
+      }
+    },
+    "PublicSubnetARouteTableAssociation" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+        "SubnetId" : {
+          "Ref" : "PublicSubnetA"
+        },
+        "RouteTableId" : {
+          "Ref" : "PublicRouteTable"
+        }
+      }
+    },
+    "PublicSubnetBRouteTableAssociation" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+        "SubnetId" : {
+          "Ref" : "PublicSubnetB"
+        },
+        "RouteTableId" : {
+          "Ref" : "PublicRouteTable"
+        }
+      }
+    },
+    "PublicSubnetCRouteTableAssociation" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+        "SubnetId" : {
+          "Ref" : "PublicSubnetC"
+        },
+        "RouteTableId" : {
+          "Ref" : "PublicRouteTable"
+        }
+      }
+    },
+    "PublicSubnetDRouteTableAssociation" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+        "SubnetId" : {
+          "Ref" : "PublicSubnetD"
+        },
+        "RouteTableId" : {
+          "Ref" : "PublicRouteTable"
+        }
+      }
+    },
+    "PublicNetworkAcl" : {
+      "Type" : "AWS::EC2::NetworkAcl",
+      "Properties" : {
+        "VpcId" : {
+          "Ref" : "VPC"
+        },
+        "Tags" : [ {
+          "Key" : "Application",
+          "Value" : {
+            "Ref" : "AWS::StackName"
+          }
+        }, {
+          "Key" : "Network",
+          "Value" : "Public"
+        } ]
+      }
+    },
+    "InboundHTTPPublicNetworkAclEntry" : {
+      "Type" : "AWS::EC2::NetworkAclEntry",
+      "Properties" : {
+        "NetworkAclId" : {
+          "Ref" : "PublicNetworkAcl"
+        },
+        "RuleNumber" : "100",
+        "Protocol" : "6",
+        "RuleAction" : "allow",
+        "Egress" : "false",
+        "CidrBlock" : "0.0.0.0/0",
+        "PortRange" : {
+          "From" : "80",
+          "To" : "80"
+        }
+      }
+    },
+    "InboundHTTPSPublicNetworkAclEntry" : {
+      "Type" : "AWS::EC2::NetworkAclEntry",
+      "Properties" : {
+        "NetworkAclId" : {
+          "Ref" : "PublicNetworkAcl"
+        },
+        "RuleNumber" : "101",
+        "Protocol" : "6",
+        "RuleAction" : "allow",
+        "Egress" : "false",
+        "CidrBlock" : "0.0.0.0/0",
+        "PortRange" : {
+          "From" : "443",
+          "To" : "443"
+        }
+      }
+    },
+    "InboundFTPPublicNetworkAclEntry" : {
+      "Type" : "AWS::EC2::NetworkAclEntry",
+      "Properties" : {
+        "NetworkAclId" : {
+          "Ref" : "PublicNetworkAcl"
+        },
+        "RuleNumber" : "104",
+        "Protocol" : "6",
+        "RuleAction" : "allow",
+        "Egress" : "false",
+        "CidrBlock" : "0.0.0.0/0",
+        "PortRange" : {
+          "From" : "21",
+          "To" : "21"
+        }
+      }
+    },
+    "InboundSSHPublicNetworkAclEntry" : {
+      "Type" : "AWS::EC2::NetworkAclEntry",
+      "Properties" : {
+        "NetworkAclId" : {
+          "Ref" : "PublicNetworkAcl"
+        },
+        "RuleNumber" : "102",
+        "Protocol" : "6",
+        "RuleAction" : "allow",
+        "Egress" : "false",
+        "CidrBlock" : "0.0.0.0/0",
+        "PortRange" : {
+          "From" : "22",
+          "To" : "22"
+        }
+      }
+    },
+    "InboundDynamicPortsPublicNetworkAclEntry" : {
+      "Type" : "AWS::EC2::NetworkAclEntry",
+      "Properties" : {
+        "NetworkAclId" : {
+          "Ref" : "PublicNetworkAcl"
+        },
+        "RuleNumber" : "103",
+        "Protocol" : "6",
+        "RuleAction" : "allow",
+        "Egress" : "false",
+        "CidrBlock" : "0.0.0.0/0",
+        "PortRange" : {
+          "From" : "1024",
+          "To" : "65535"
+        }
+      }
+    },
+    "OutboundDynamicPortPublicNetworkAclEntry" : {
+      "Type" : "AWS::EC2::NetworkAclEntry",
+      "Properties" : {
+        "NetworkAclId" : {
+          "Ref" : "PublicNetworkAcl"
+        },
+        "RuleNumber" : "100",
+        "Protocol" : "6",
+        "RuleAction" : "allow",
+        "Egress" : "true",
+        "CidrBlock" : "0.0.0.0/0",
+        "PortRange" : {
+          "From" : "0",
+          "To" : "65535"
+        }
+      }
+    },
+    "PublicSubnetANetworkAclAssociation" : {
+      "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties" : {
+        "SubnetId" : {
+          "Ref" : "PublicSubnetA"
+        },
+        "NetworkAclId" : {
+          "Ref" : "PublicNetworkAcl"
+        }
+      }
+    },
+    "PublicSubnetBNetworkAclAssociation" : {
+      "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties" : {
+        "SubnetId" : {
+          "Ref" : "PublicSubnetB"
+        },
+        "NetworkAclId" : {
+          "Ref" : "PublicNetworkAcl"
+        }
+      }
+    },
+    "PublicSubnetCNetworkAclAssociation" : {
+      "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties" : {
+        "SubnetId" : {
+          "Ref" : "PublicSubnetC"
+        },
+        "NetworkAclId" : {
+          "Ref" : "PublicNetworkAcl"
+        }
+      }
+    },
+    "PublicSubnetDNetworkAclAssociation" : {
+      "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties" : {
+        "SubnetId" : {
+          "Ref" : "PublicSubnetD"
+        },
+        "NetworkAclId" : {
+          "Ref" : "PublicNetworkAcl"
+        }
+      }
+    },
+    "PrivateSubnetA" : {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties" : {
+        "VpcId" : {
+          "Ref" : "VPC"
+        },
+        "CidrBlock" : {
+          "Fn::Join" : [ ".", [ "10", {
+            "Ref" : "VPC10X"
+          }, {
+            "Fn::FindInMap" : [ "SubnetConfig", "PrivateSubnetA", "CIDR" ]
+          } ] ]
+        },
+        "AvailabilityZone" : {
+          "Fn::FindInMap" : [ "AccountSpecific", {
+            "Ref" : "AWSAccount"
+          }, "ZoneA" ]
+        },
+        "Tags" : [ {
+          "Key" : "Application",
+          "Value" : {
+            "Ref" : "AWS::StackName"
+          }
+        }, {
+          "Key" : "Network",
+          "Value" : "Private"
+        } ]
+      }
+    },
+    "PrivateSubnetB" : {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties" : {
+        "VpcId" : {
+          "Ref" : "VPC"
+        },
+        "CidrBlock" : {
+          "Fn::Join" : [ ".", [ "10", {
+            "Ref" : "VPC10X"
+          }, {
+            "Fn::FindInMap" : [ "SubnetConfig", "PrivateSubnetB", "CIDR" ]
+          } ] ]
+        },
+        "AvailabilityZone" : {
+          "Fn::FindInMap" : [ "AccountSpecific", {
+            "Ref" : "AWSAccount"
+          }, "ZoneB" ]
+        },
+        "Tags" : [ {
+          "Key" : "Application",
+          "Value" : {
+            "Ref" : "AWS::StackName"
+          }
+        }, {
+          "Key" : "Network",
+          "Value" : "Private"
+        } ]
+      }
+    },
+    "PrivateSubnetC" : {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties" : {
+        "VpcId" : {
+          "Ref" : "VPC"
+        },
+        "CidrBlock" : {
+          "Fn::Join" : [ ".", [ "10", {
+            "Ref" : "VPC10X"
+          }, {
+            "Fn::FindInMap" : [ "SubnetConfig", "PrivateSubnetC", "CIDR" ]
+          } ] ]
+        },
+        "AvailabilityZone" : {
+          "Fn::FindInMap" : [ "AccountSpecific", {
+            "Ref" : "AWSAccount"
+          }, "ZoneC" ]
+        },
+        "Tags" : [ {
+          "Key" : "Application",
+          "Value" : {
+            "Ref" : "AWS::StackName"
+          }
+        }, {
+          "Key" : "Network",
+          "Value" : "Private"
+        } ]
+      }
+    },
+    "PrivateSubnetD" : {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties" : {
+        "VpcId" : {
+          "Ref" : "VPC"
+        },
+        "CidrBlock" : {
+          "Fn::Join" : [ ".", [ "10", {
+            "Ref" : "VPC10X"
+          }, {
+            "Fn::FindInMap" : [ "SubnetConfig", "PrivateSubnetD", "CIDR" ]
+          } ] ]
+        },
+        "AvailabilityZone" : {
+          "Fn::FindInMap" : [ "AccountSpecific", {
+            "Ref" : "AWSAccount"
+          }, "ZoneD" ]
+        },
+        "Tags" : [ {
+          "Key" : "Application",
+          "Value" : {
+            "Ref" : "AWS::StackName"
+          }
+        }, {
+          "Key" : "Network",
+          "Value" : "Private"
+        } ]
+      }
+    },
+    "PrivateRouteTable" : {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId" : {
+          "Ref" : "VPC"
+        },
+        "Tags" : [ {
+          "Key" : "Application",
+          "Value" : {
+            "Ref" : "AWS::StackName"
+          }
+        }, {
+          "Key" : "Network",
+          "Value" : "Private"
+        } ]
+      }
+    },
+    "PrivateSubnetARouteTableAssociation" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+        "SubnetId" : {
+          "Ref" : "PrivateSubnetA"
+        },
+        "RouteTableId" : {
+          "Ref" : "PrivateRouteTable"
+        }
+      }
+    },
+    "PrivateSubnetBRouteTableAssociation" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+        "SubnetId" : {
+          "Ref" : "PrivateSubnetB"
+        },
+        "RouteTableId" : {
+          "Ref" : "PrivateRouteTable"
+        }
+      }
+    },
+    "PrivateSubnetCRouteTableAssociation" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+        "SubnetId" : {
+          "Ref" : "PrivateSubnetC"
+        },
+        "RouteTableId" : {
+          "Ref" : "PrivateRouteTable"
+        }
+      }
+    },
+    "PrivateSubnetDRouteTableAssociation" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+        "SubnetId" : {
+          "Ref" : "PrivateSubnetD"
+        },
+        "RouteTableId" : {
+          "Ref" : "PrivateRouteTable"
+        }
+      }
+    },
+    "PrivateRoute" : {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "RouteTableId" : {
+          "Ref" : "PrivateRouteTable"
+        },
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "InstanceId" : {
+          "Ref" : "NATServer"
+        }
+      }
+    },
+    "PrivateNetworkAcl" : {
+      "Type" : "AWS::EC2::NetworkAcl",
+      "Properties" : {
+        "VpcId" : {
+          "Ref" : "VPC"
+        },
+        "Tags" : [ {
+          "Key" : "Application",
+          "Value" : {
+            "Ref" : "AWS::StackName"
+          }
+        }, {
+          "Key" : "Network",
+          "Value" : "Private"
+        } ]
+      }
+    },
+    "InboundPrivateNetworkAclEntry" : {
+      "Type" : "AWS::EC2::NetworkAclEntry",
+      "Properties" : {
+        "NetworkAclId" : {
+          "Ref" : "PrivateNetworkAcl"
+        },
+        "RuleNumber" : "100",
+        "Protocol" : "6",
+        "RuleAction" : "allow",
+        "Egress" : "false",
+        "CidrBlock" : "0.0.0.0/0",
+        "PortRange" : {
+          "From" : "0",
+          "To" : "65535"
+        }
+      }
+    },
+    "OutboundPrivateNetworkAclEntry" : {
+      "Type" : "AWS::EC2::NetworkAclEntry",
+      "Properties" : {
+        "NetworkAclId" : {
+          "Ref" : "PrivateNetworkAcl"
+        },
+        "RuleNumber" : "100",
+        "Protocol" : "6",
+        "RuleAction" : "allow",
+        "Egress" : "true",
+        "CidrBlock" : "0.0.0.0/0",
+        "PortRange" : {
+          "From" : "0",
+          "To" : "65535"
+        }
+      }
+    },
+    "PrivateSubnetANetworkAclAssociation" : {
+      "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties" : {
+        "SubnetId" : {
+          "Ref" : "PrivateSubnetA"
+        },
+        "NetworkAclId" : {
+          "Ref" : "PrivateNetworkAcl"
+        }
+      }
+    },
+    "PrivateSubnetBNetworkAclAssociation" : {
+      "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties" : {
+        "SubnetId" : {
+          "Ref" : "PrivateSubnetB"
+        },
+        "NetworkAclId" : {
+          "Ref" : "PrivateNetworkAcl"
+        }
+      }
+    },
+    "PrivateSubnetCNetworkAclAssociation" : {
+      "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties" : {
+        "SubnetId" : {
+          "Ref" : "PrivateSubnetC"
+        },
+        "NetworkAclId" : {
+          "Ref" : "PrivateNetworkAcl"
+        }
+      }
+    },
+    "PrivateSubnetDNetworkAclAssociation" : {
+      "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties" : {
+        "SubnetId" : {
+          "Ref" : "PrivateSubnetD"
+        },
+        "NetworkAclId" : {
+          "Ref" : "PrivateNetworkAcl"
+        }
+      }
+    },
+    "VPNServerSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable OpenVPN access",
+        "VpcId" : {
+          "Ref" : "VPC"
+        },
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "443",
+          "ToPort" : "443",
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "udp",
+          "FromPort" : "1194",
+          "ToPort" : "1194",
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "22",
+          "ToPort" : "22",
+          "CidrIp" : "0.0.0.0/0"
+        } ]
+      }
+    },
+    "VPNIPAddress" : {
+      "Type" : "AWS::EC2::EIP",
+      "Properties" : {
+        "Domain" : "vpc",
+        "InstanceId" : {
+          "Ref" : "VPNServer"
+        }
+      }
+    },
+    "VPNServer" : {
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "SubnetId" : {
+          "Ref" : "PublicSubnetA"
+        },
+        "ImageId" : "ami-6c71ca05",
+        "InstanceType" : "m1.small",
+        "KeyName" : {
+          "Ref" : "KeyName"
+        },
+        "Tags" : [ {
+          "Key" : "Network",
+          "Value" : "Public"
+        }, {
+          "Key" : "Name",
+          "Value" : {
+            "Fn::Join" : [ "-", [ {
+              "Ref" : "AWS::StackName"
+            }, "VPNServer" ] ]
+          }
+        } ],
+        "SecurityGroupIds" : [ {
+          "Ref" : "VPNServerSecurityGroup"
+        } ],
+        "UserData" : {
+          "Fn::Base64" : {
+            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "#Append additional authorized_keys to ec2-user's keys\n", "cat <<EOF> /mnt/.s3cfg\n", "[default]\n", "access_key = ", {
+              "Ref" : "CfnKeys"
+            }, "\n", "secret_key = ", {
+              "Fn::GetAtt" : [ "CfnKeys", "SecretAccessKey" ]
+            }, "\n", "use_https = True\n", "EOF\n", "cd /mnt\n", "wget http://s3.amazonaws.com/iblogix/s3cmd-1.0.1.tar.gz\n", "tar -zxf s3cmd-1.0.1.tar.gz\n", "/mnt/s3cmd-1.0.1/s3cmd -c /mnt/.s3cfg get s3://", {
+              "Ref" : "S3DeploymentBucket"
+            }, "/ssh_keys  /tmp/ssh_keys\n", "cat /tmp/ssh_keys >> /root/.ssh/authorized_keys\n", "rm -f /tmp/ssh_keys\n", "#Cleanup the s3cfg file as it is placed in the public subnet\n", "rm -f /mnt/.s3cfg\n" ] ]
+          }
+        }
+      }
+    },
+    "NATIPAddress" : {
+      "Type" : "AWS::EC2::EIP",
+      "Properties" : {
+        "Domain" : "vpc",
+        "InstanceId" : {
+          "Ref" : "NATServer"
+        }
+      }
+    },
+    "NATServer" : {
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "SubnetId" : {
+          "Ref" : "PublicSubnetB"
+        },
+        "ImageId" : "ami-c6699baf",
+        "SourceDestCheck" : "false",
+        "InstanceType" : "m1.small",
+        "KeyName" : {
+          "Ref" : "KeyName"
+        },
+        "Tags" : [ {
+          "Key" : "Network",
+          "Value" : "Public"
+        }, {
+          "Key" : "Name",
+          "Value" : {
+            "Fn::Join" : [ "-", [ {
+              "Ref" : "AWS::StackName"
+            }, "NATServer" ] ]
+          }
+        } ],
+        "SecurityGroupIds" : [ {
+          "Ref" : "NATServerSecurityGroup"
+        } ],
+        "UserData" : {
+          "Fn::Base64" : {
+            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "#Append additional authorized_keys to ec2-user's keys\n", "cat <<EOF> /mnt/.s3cfg\n", "[default]\n", "access_key = ", {
+              "Ref" : "CfnKeys"
+            }, "\n", "secret_key = ", {
+              "Fn::GetAtt" : [ "CfnKeys", "SecretAccessKey" ]
+            }, "\n", "use_https = True\n", "EOF\n", "cd /mnt\n", "wget http://s3.amazonaws.com/iblogix/s3cmd-1.0.1.tar.gz\n", "tar -zxf s3cmd-1.0.1.tar.gz\n", "/mnt/s3cmd-1.0.1/s3cmd -c /mnt/.s3cfg get s3://", {
+              "Ref" : "S3DeploymentBucket"
+            }, "/ssh_keys  /tmp/ssh_keys\n", "cat /tmp/ssh_keys >> /home/ec2-user/.ssh/authorized_keys\n", "rm -f /tmp/ssh_keys\n", "#Cleanup the s3cfg file as it is placed in the public subnet\n", "rm -f /mnt/.s3cfg\n" ] ]
+          }
+        }
+      }
+    },
+    "NATServerSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable NAT server access",
+        "VpcId" : {
+          "Ref" : "VPC"
+        },
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "80",
+          "ToPort" : "80",
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "443",
+          "ToPort" : "443",
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "8080",
+          "ToPort" : "8080",
+          "CidrIp" : "0.0.0.0/0"
+        },{
+          "IpProtocol" : "tcp",
+          "FromPort" : "22",
+          "ToPort" : "22",
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "8088",
+          "ToPort" : "8088",
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "21",
+          "ToPort" : "21",
+          "CidrIp" : "0.0.0.0/0"
+        } ],
+        "SecurityGroupEgress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "80",
+          "ToPort" : "80",
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "22",
+          "ToPort" : "22",
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "443",
+          "ToPort" : "443",
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "8080",
+          "ToPort" : "8080",
+          "CidrIp" : "0.0.0.0/0"
+        },{
+          "IpProtocol" : "tcp",
+          "FromPort" : "8088",
+          "ToPort" : "8088",
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "21",
+          "ToPort" : "21",
+          "CidrIp" : "0.0.0.0/0"
+        } ]
+      }
+    },
+    "AdminWebServerElasticLoadBalancer" : {
+      "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties" : {
+        "SecurityGroups" : [ {
+          "Ref" : "AdminLoadBalancerSecurityGroup"
+        } ],
+        "Subnets" : [ {
+          "Ref" : "PublicSubnetA"
+        }, {
+          "Ref" : "PublicSubnetB"
+        }, {
+          "Ref" : "PublicSubnetC"
+        }, {
+          "Ref" : "PublicSubnetD"
+        } ],
+        "LBCookieStickinessPolicy" : [ {
+          "PolicyName" : "CookieBasedPolicy",
+          "CookieExpirationPeriod" : "30"
+        } ],
+        "Listeners" : [ {
+          "InstancePort" : {
+            "Ref" : "AdminWebServerPort"
+          },
+          "LoadBalancerPort" : 80,
+          "Protocol" : "HTTP",
+          "PolicyNames" : [ "CookieBasedPolicy" ]
+        }, {
+          "InstancePort" : {
+            "Ref" : "AdminWebServerPort"
+          },
+          "LoadBalancerPort" : "443",
+          "Protocol" : "HTTPS",
+          "SSLCertificateId" : {
+            "Fn::Join" : [ "", [ "arn:aws:iam::", {
+              "Fn::FindInMap" : [ "AccountSpecific", {
+                "Ref" : "AWSAccount"
+              }, "AccountNumber" ]
+            }, ":server-certificate/", {
+              "Ref" : "SSLCertificateName"
+            } ] ]
+          },
+          "PolicyNames" : [ "CookieBasedPolicy" ]
+        } ],
+        "HealthCheck" : {
+          "Target" : {
+            "Fn::Join" : [ "", [ "HTTP:", {
+              "Ref" : "AdminWebServerPort"
+            }, "/session/new" ] ]
+          },
+          "HealthyThreshold" : "2",
+          "UnhealthyThreshold" : "5",
+          "Interval" : "10",
+          "Timeout" : "5"
+        }
+      }
+    },
+    "AdminLoadBalancerSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable HTTP access on port 80",
+        "VpcId" : {
+          "Ref" : "VPC"
+        },
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "80",
+          "ToPort" : "80",
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "443",
+          "ToPort" : "443",
+          "CidrIp" : "0.0.0.0/0"
+        } ],
+        "SecurityGroupEgress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : {
+            "Ref" : "AdminWebServerPort"
+          },
+          "ToPort" : {
+            "Ref" : "AdminWebServerPort"
+          },
+          "CidrIp" : "0.0.0.0/0"
+        } ]
+      }
+    },
+    "AdminFleet" : {
+      "Type" : "AWS::AutoScaling::AutoScalingGroup",
+      "Properties" : {
+        "NotificationConfiguration" : {
+          "TopicARN" : {
+            "Ref" : "NotificationTopic"
+          },
+          "NotificationTypes" : [ "autoscaling:EC2_INSTANCE_LAUNCH", "autoscaling:EC2_INSTANCE_LAUNCH_ERROR", "autoscaling:EC2_INSTANCE_TERMINATE", "autoscaling:EC2_INSTANCE_TERMINATE_ERROR" ]
+        },
+        "AvailabilityZones" : [ {
+          "Fn::GetAtt" : [ "PrivateSubnetA", "AvailabilityZone" ]
+        }, {
+          "Fn::GetAtt" : [ "PrivateSubnetB", "AvailabilityZone" ]
+        }, {
+          "Fn::GetAtt" : [ "PrivateSubnetC", "AvailabilityZone" ]
+        }, {
+          "Fn::GetAtt" : [ "PrivateSubnetD", "AvailabilityZone" ]
+        } ],
+        "VPCZoneIdentifier" : [ {
+          "Ref" : "PrivateSubnetA"
+        }, {
+          "Ref" : "PrivateSubnetB"
+        }, {
+          "Ref" : "PrivateSubnetC"
+        }, {
+          "Ref" : "PrivateSubnetD"
+        } ],
+        "LaunchConfigurationName" : {
+          "Ref" : "AdminWebServerLaunchConfig"
+        },
+        "MinSize" : {
+          "Ref" : "FleetMin"
+        },
+        "MaxSize" : {
+          "Ref" : "FleetMax"
+        },
+        "DesiredCapacity" : {
+          "Ref" : "FleetDesired"
+        },
+        "LoadBalancerNames" : [ {
+          "Ref" : "AdminWebServerElasticLoadBalancer"
+        } ],
+        "Tags" : [ {
+          "Key" : "Network",
+          "Value" : "Public",
+          "PropagateAtLaunch" : "true"
+        }, {
+          "Key" : "Name",
+          "Value" : {
+            "Fn::Join" : [ "-", [ {
+              "Ref" : "AWS::StackName"
+            }, "AdminFleet" ] ]
+          },
+          "PropagateAtLaunch" : "true"
+        } ]
+      }
+    },
+    "AdminWebServerLaunchConfig" : {
+      "Type" : "AWS::AutoScaling::LaunchConfiguration",
+      "Metadata" : {
+        "Comment1" : "Configure the Admin server to respond to requests",
+        "AWS::CloudFormation::Authentication" : {
+          "S3AccessCreds" : {
+            "type" : "S3",
+            "accessKeyId" : {
+              "Ref" : "CfnKeys"
+            },
+            "secretKey" : {
+              "Fn::GetAtt" : [ "CfnKeys", "SecretAccessKey" ]
+            },
+            "buckets" : [ {
+              "Ref" : "S3DeploymentBucket"
+            } ]
+          }
+        },
+        "AWS::CloudFormation::Init" : {
+          "config" : {
+            "sources" : {
+              "/mnt/applications" : {
+                "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                  "Ref" : "S3DeploymentBucket"
+                }, "builds/env/gsa/current" ,{
+                  "Fn::FindInMap" : [ "AccountSpecific", {
+                    "Ref" : "AWSAccount"
+                  }, "AdminBundle" ]
+                } ] ]
+              }
+            },
+            "files" : {
+              "/mnt/nginx.conf" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "nginx.conf" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/.s3cfg" : {
+                "content" : {
+                  "Fn::Join" : [ "", [ "[default]\n", "access_key = ", {
+                    "Ref" : "CfnKeys"
+                  }, "\n", "secret_key = ", {
+                    "Fn::GetAtt" : [ "CfnKeys", "SecretAccessKey" ]
+                  }, "\n", "use_https = True\n" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/database.yml" : {
+                "content" : {
+                  "Fn::Join" : [ "", [ "production:\n", "  adapter: mysql2\n", "  encoding: utf8\n", "  database: ", {
+                    "Ref" : "DatabaseName"
+                  }, "\n", "  username: ", {
+                    "Ref" : "DatabaseUser"
+                  }, "\n", "  password: ", {
+                    "Ref" : "DatabasePassword"
+                  }, "\n", "  host: ", {
+                    "Fn::GetAtt" : [ "DatabaseServer", "Endpoint.Address" ]
+                  }, "\n" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/settings.yml" : {
+                "content" : {
+                  "Fn::Join" : [ "", [ "production:\n", "  aws_access_id: \"AKIAI72HORYSTPXRN6EQ\"\n", "  aws_secret_key: \"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\"\n", {
+                    "Fn::Join" : [ "", [ "  rest_api_url: \"http://", {
+                      "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
+                    }, ":", {
+                      "Ref" : "BackendServerPort"
+                    }, "/firstfuel/\"\n" ] ]
+                  }, {
+                    "Fn::Join" : [ "", [ "  rest_api_prefix: \"http://", {
+                      "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
+                    }, ":", {
+                      "Ref" : "BackendServerPort"
+                    }, "/firstfuel/rest-resource/\"\n" ] ]
+                  }, "  s3_bucket: \"iblogix/multitenancy/production\"\n", "  s3_folder_path: \"/multitenancy/production\"\n", "  paperclip_command_path: \"/usr/bin/\"\n", "  captcha_key: 6LdAlM0SAAAAAHrNl282SyMae7QEg5rkWHAJNqyB\n", "  jira_url_prefix: \"https://firstfuel.atlassian.net/browse/\"\n", "  smtp_server: \"smtp.gmail.com\"\n", "  smtp_user_name: \"sysuser@firstfuel.com\"\n", "  smtp_pasword: \"$y$bot!@#\"\n" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/admin.codecheckout.sh" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "admin.codecheckout.sh" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/ssh_keys" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "ssh_keys" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              }
+            }
+          }
+        }
+      },
+      "Properties" : {
+        "InstanceType" : {
+          "Ref" : "FrontEndInstanceType"
+        },
+        "ImageId" : {
+          "Fn::FindInMap" : [ "FirstFuelStack", "AdminWebServer", "AMI" ]
+        },
+        "SecurityGroups" : [ {
+          "Ref" : "AdminSecurityGroup"
+        } ],
+        "KeyName" : {
+          "Ref" : "KeyName"
+        },
+        "UserData" : {
+          "Fn::Base64" : {
+            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "yum update -y aws-cfn-bootstrap\n", "/opt/aws/bin/cfn-init -s ", {
+              "Ref" : "AWS::StackName"
+            }, " -r AdminWebServerLaunchConfig ", " --access-key ", {
+              "Ref" : "CfnKeys"
+            }, " --secret-key ", {
+              "Fn::GetAtt" : [ "CfnKeys", "SecretAccessKey" ]
+            }, " --region ", {
+              "Ref" : "AWS::Region"
+            }, " || exit 1\n", "/bin/sh -x /mnt/admin.codecheckout.sh || exit 1\n" ] ]
+          }
+        }
+      }
+    },
+    "AdminSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Allow access from load balancer as well as outbound HTTP and HTTPS traffic",
+        "VpcId" : {
+          "Ref" : "VPC"
+        },
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : {
+            "Ref" : "AdminWebServerPort"
+          },
+          "ToPort" : {
+            "Ref" : "AdminWebServerPort"
+          },
+          "SourceSecurityGroupId" : {
+            "Ref" : "AdminLoadBalancerSecurityGroup"
+          }
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "22",
+          "ToPort" : "22",
+          "CidrIp" : "0.0.0.0/0"
+        } ],
+        "SecurityGroupEgress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : {
+            "Ref" : "BackendServerPort"
+          },
+          "ToPort" : {
+            "Ref" : "BackendServerPort"
+          },
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : {
+            "Ref" : "DatabasePort"
+          },
+          "ToPort" : {
+            "Ref" : "DatabasePort"
+          },
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "80",
+          "ToPort" : "80",
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "443",
+          "ToPort" : "443",
+          "CidrIp" : "0.0.0.0/0"
+        } ]
+      }
+    },
+    "AdminWaitHandle" : {
+      "Type" : "AWS::CloudFormation::WaitConditionHandle"
+    },
+    "AdminWaitCondition" : {
+      "Type" : "AWS::CloudFormation::WaitCondition",
+      "DependsOn" : "AdminFleet",
+      "Properties" : {
+        "Handle" : {
+          "Ref" : "AdminWaitHandle"
+        },
+        "Timeout" : "900",
+        "Count" : "0"
+      }
+    },
+    "AdminServerScaleUpPolicy" : {
+      "Type" : "AWS::AutoScaling::ScalingPolicy",
+      "Properties" : {
+        "AdjustmentType" : "ChangeInCapacity",
+        "AutoScalingGroupName" : {
+          "Ref" : "AdminFleet"
+        },
+        "Cooldown" : "60",
+        "ScalingAdjustment" : "1"
+      }
+    },
+    "AdminServerScaleDownPolicy" : {
+      "Type" : "AWS::AutoScaling::ScalingPolicy",
+      "Properties" : {
+        "AdjustmentType" : "ChangeInCapacity",
+        "AutoScalingGroupName" : {
+          "Ref" : "AdminFleet"
+        },
+        "Cooldown" : "60",
+        "ScalingAdjustment" : "-1"
+      }
+    },
+    "AdminServerCPUAlarmHigh" : {
+      "Type" : "AWS::CloudWatch::Alarm",
+      "Properties" : {
+        "AlarmDescription" : "Scale-up if CPU > 90% for 10 minutes",
+        "MetricName" : "CPUUtilization",
+        "Namespace" : "AWS/EC2",
+        "Statistic" : "Average",
+        "Period" : "60",
+        "EvaluationPeriods" : "10",
+        "Threshold" : "90",
+        "AlarmActions" : [ {
+          "Ref" : "AdminServerScaleUpPolicy"
+        } ],
+        "Dimensions" : [ {
+          "Name" : "AutoScalingGroupName",
+          "Value" : {
+            "Ref" : "AdminFleet"
+          }
+        } ],
+        "ComparisonOperator" : "GreaterThanThreshold"
+      }
+    },
+    "AdminServerCPUAlarmLow" : {
+      "Type" : "AWS::CloudWatch::Alarm",
+      "Properties" : {
+        "AlarmDescription" : "Scale-down if CPU < 20% for 10 minutes",
+        "MetricName" : "CPUUtilization",
+        "Namespace" : "AWS/EC2",
+        "Statistic" : "Average",
+        "Period" : "60",
+        "EvaluationPeriods" : "10",
+        "Threshold" : "20",
+        "AlarmActions" : [ {
+          "Ref" : "AdminServerScaleDownPolicy"
+        } ],
+        "Dimensions" : [ {
+          "Name" : "AutoScalingGroupName",
+          "Value" : {
+            "Ref" : "AdminFleet"
+          }
+        } ],
+        "ComparisonOperator" : "LessThanThreshold"
+      }
+    },
+    "ConsumerWebServerElasticLoadBalancer" : {
+      "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties" : {
+        "SecurityGroups" : [ {
+          "Ref" : "ConsumerLoadBalancerSecurityGroup"
+        } ],
+        "Subnets" : [ {
+          "Ref" : "PublicSubnetA"
+        }, {
+          "Ref" : "PublicSubnetB"
+        }, {
+          "Ref" : "PublicSubnetC"
+        }, {
+          "Ref" : "PublicSubnetD"
+        } ],
+        "LBCookieStickinessPolicy" : [ {
+          "PolicyName" : "CookieBasedPolicy",
+          "CookieExpirationPeriod" : "30"
+        } ],
+        "Listeners" : [ {
+          "InstancePort" : {
+            "Ref" : "ConsumerWebServerPort"
+          },
+          "LoadBalancerPort" : 80,
+          "Protocol" : "HTTP",
+          "PolicyNames" : [ "CookieBasedPolicy" ]
+        }, {
+          "InstancePort" : {
+            "Ref" : "ConsumerWebServerPort"
+          },
+          "LoadBalancerPort" : "443",
+          "Protocol" : "HTTPS",
+          "SSLCertificateId" : {
+            "Fn::Join" : [ "", [ "arn:aws:iam::", {
+              "Fn::FindInMap" : [ "AccountSpecific", {
+                "Ref" : "AWSAccount"
+              }, "AccountNumber" ]
+            }, ":server-certificate/", {
+              "Ref" : "SSLCertificateName"
+            } ] ]
+          },
+          "PolicyNames" : [ "CookieBasedPolicy" ]
+        } ],
+        "HealthCheck" : {
+          "Target" : {
+            "Fn::Join" : [ "", [ "HTTP:", {
+              "Ref" : "ConsumerWebServerPort"
+            }, "/session/new" ] ]
+          },
+          "HealthyThreshold" : "2",
+          "UnhealthyThreshold" : "5",
+          "Interval" : "10",
+          "Timeout" : "5"
+        }
+      }
+    },
+    "ConsumerLoadBalancerSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable HTTP access on port 80",
+        "VpcId" : {
+          "Ref" : "VPC"
+        },
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "80",
+          "ToPort" : "80",
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "443",
+          "ToPort" : "443",
+          "CidrIp" : "0.0.0.0/0"
+        } ],
+        "SecurityGroupEgress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : {
+            "Ref" : "ConsumerWebServerPort"
+          },
+          "ToPort" : {
+            "Ref" : "ConsumerWebServerPort"
+          },
+          "CidrIp" : "0.0.0.0/0"
+        } ]
+      }
+    },
+    "ConsumerFleet" : {
+      "Type" : "AWS::AutoScaling::AutoScalingGroup",
+      "Properties" : {
+        "NotificationConfiguration" : {
+          "TopicARN" : {
+            "Ref" : "NotificationTopic"
+          },
+          "NotificationTypes" : [ "autoscaling:EC2_INSTANCE_LAUNCH", "autoscaling:EC2_INSTANCE_LAUNCH_ERROR", "autoscaling:EC2_INSTANCE_TERMINATE", "autoscaling:EC2_INSTANCE_TERMINATE_ERROR" ]
+        },
+        "AvailabilityZones" : [ {
+          "Fn::GetAtt" : [ "PrivateSubnetA", "AvailabilityZone" ]
+        }, {
+          "Fn::GetAtt" : [ "PrivateSubnetB", "AvailabilityZone" ]
+        }, {
+          "Fn::GetAtt" : [ "PrivateSubnetC", "AvailabilityZone" ]
+        }, {
+          "Fn::GetAtt" : [ "PrivateSubnetD", "AvailabilityZone" ]
+        } ],
+        "VPCZoneIdentifier" : [ {
+          "Ref" : "PrivateSubnetA"
+        }, {
+          "Ref" : "PrivateSubnetB"
+        }, {
+          "Ref" : "PrivateSubnetC"
+        }, {
+          "Ref" : "PrivateSubnetD"
+        } ],
+        "LaunchConfigurationName" : {
+          "Ref" : "ConsumerWebServerLaunchConfig"
+        },
+        "MinSize" : {
+          "Ref" : "FleetMin"
+        },
+        "MaxSize" : {
+          "Ref" : "FleetMax"
+        },
+        "DesiredCapacity" : {
+          "Ref" : "FleetDesired"
+        },
+        "LoadBalancerNames" : [ {
+          "Ref" : "ConsumerWebServerElasticLoadBalancer"
+        } ],
+        "Tags" : [ {
+          "Key" : "Network",
+          "Value" : "Public",
+          "PropagateAtLaunch" : "true"
+        }, {
+          "Key" : "Name",
+          "Value" : {
+            "Fn::Join" : [ "-", [ {
+              "Ref" : "AWS::StackName"
+            }, "PortalFleet" ] ]
+          },
+          "PropagateAtLaunch" : "true"
+        } ]
+      }
+    },
+    "ConsumerWebServerLaunchConfig" : {
+      "Type" : "AWS::AutoScaling::LaunchConfiguration",
+      "Metadata" : {
+        "Comment1" : "Configure the Consumer server to respond to requests",
+        "AWS::CloudFormation::Authentication" : {
+          "S3AccessCreds" : {
+            "type" : "S3",
+            "accessKeyId" : {
+              "Ref" : "CfnKeys"
+            },
+            "secretKey" : {
+              "Fn::GetAtt" : [ "CfnKeys", "SecretAccessKey" ]
+            },
+            "buckets" : [ {
+              "Ref" : "S3DeploymentBucket"
+            } ]
+          }
+        },
+        "AWS::CloudFormation::Init" : {
+          "config" : {
+            "sources" : {
+              "/mnt/applications" : {
+                "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                  "Ref" : "S3DeploymentBucket"
+                }, "builds/env/gsa/current" ,{
+                  "Fn::FindInMap" : [ "AccountSpecific", {
+                    "Ref" : "AWSAccount"
+                  }, "ConsumerBundle" ]
+                } ] ]
+              }
+            },
+            "files" : {
+              "/mnt/dummy" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "nginx.conf" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/nginx.conf" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "nginx.conf" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/.s3cfg" : {
+                "content" : {
+                  "Fn::Join" : [ "", [ "[default]\n", "access_key = ", {
+                    "Ref" : "CfnKeys"
+                  }, "\n", "secret_key = ", {
+                    "Fn::GetAtt" : [ "CfnKeys", "SecretAccessKey" ]
+                  }, "\n", "use_https = True\n" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/database.yml" : {
+                "content" : {
+                  "Fn::Join" : [ "", [ "production:\n", "  adapter: mysql2\n", "  encoding: utf8\n", "  database: ", {
+                    "Ref" : "DatabaseName"
+                  }, "\n", "  username: ", {
+                    "Ref" : "DatabaseUser"
+                  }, "\n", "  password: ", {
+                    "Ref" : "DatabasePassword"
+                  }, "\n", "  host: ", {
+                    "Fn::GetAtt" : [ "DatabaseServer", "Endpoint.Address" ]
+                  }, "\n" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/settings.yml" : {
+                "content" : {
+                  "Fn::Join" : [ "", [ "production:\n", "  aws_access_id: \"AKIAI72HORYSTPXRN6EQ\"\n", "  aws_secret_key: \"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\"\n", {
+                    "Fn::Join" : [ "", [ "  rest_api_url: \"http://", {
+                      "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
+                    }, ":", {
+                      "Ref" : "BackendServerPort"
+                    }, "/firstfuel/\"\n" ] ]
+                  }, {
+                    "Fn::Join" : [ "", [ "  rest_api_prefix: \"http://", {
+                      "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
+                    }, ":", {
+                      "Ref" : "BackendServerPort"
+                    }, "/firstfuel/rest-resource/\"\n" ] ]
+                  }, "  s3_bucket: \"iblogix/multitenancy/production\"\n", "  s3_folder_path: \"/multitenancy/production\"\n", "  paperclip_command_path: \"/usr/bin/\"\n", "  captcha_key: 6LdAlM0SAAAAAHrNl282SyMae7QEg5rkWHAJNqyB\n", "  jira_url_prefix: \"https://firstfuel.atlassian.net/browse/\"\n", "  smtp_server: \"smtp.gmail.com\"\n", "  smtp_user_name: \"sysuser@firstfuel.com\"\n", "  smtp_pasword: \"$y$bot!@#\"\n" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/consumer.codecheckout.sh" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "consumer.codecheckout.sh" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/ssh_keys" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "ssh_keys" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              }
+            }
+          }
+        }
+      },
+      "Properties" : {
+        "InstanceType" : {
+          "Ref" : "FrontEndInstanceType"
+        },
+        "ImageId" : {
+          "Fn::FindInMap" : [ "FirstFuelStack", "ConsumerWebServer", "AMI" ]
+        },
+        "SecurityGroups" : [ {
+          "Ref" : "ConsumerSecurityGroup"
+        } ],
+        "KeyName" : {
+          "Ref" : "KeyName"
+        },
+        "UserData" : {
+          "Fn::Base64" : {
+            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "yum update -y aws-cfn-bootstrap\n", "/opt/aws/bin/cfn-init -s ", {
+              "Ref" : "AWS::StackName"
+            }, " -r ConsumerWebServerLaunchConfig ", "    --access-key ", {
+              "Ref" : "CfnKeys"
+            }, " --secret-key ", {
+              "Fn::GetAtt" : [ "CfnKeys", "SecretAccessKey" ]
+            }, " --region ", {
+              "Ref" : "AWS::Region"
+            }, " || exit 1\n", "/bin/sh -x /mnt/consumer.codecheckout.sh || exit 1\n" ] ]
+          }
+        }
+      }
+    },
+    "ConsumerSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Allow access from load balancer as well as outbound HTTP and HTTPS traffic",
+        "VpcId" : {
+          "Ref" : "VPC"
+        },
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : {
+            "Ref" : "ConsumerWebServerPort"
+          },
+          "ToPort" : {
+            "Ref" : "ConsumerWebServerPort"
+          },
+          "SourceSecurityGroupId" : {
+            "Ref" : "ConsumerLoadBalancerSecurityGroup"
+          }
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "22",
+          "ToPort" : "22",
+          "CidrIp" : "0.0.0.0/0"
+        } ],
+        "SecurityGroupEgress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : {
+            "Ref" : "BackendServerPort"
+          },
+          "ToPort" : {
+            "Ref" : "BackendServerPort"
+          },
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : {
+            "Ref" : "DatabasePort"
+          },
+          "ToPort" : {
+            "Ref" : "DatabasePort"
+          },
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "80",
+          "ToPort" : "80",
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "443",
+          "ToPort" : "443",
+          "CidrIp" : "0.0.0.0/0"
+        } ]
+      }
+    },
+    "ConsumerWaitHandle" : {
+      "Type" : "AWS::CloudFormation::WaitConditionHandle"
+    },
+    "ConsumerWaitCondition" : {
+      "Type" : "AWS::CloudFormation::WaitCondition",
+      "DependsOn" : "ConsumerFleet",
+      "Properties" : {
+        "Handle" : {
+          "Ref" : "ConsumerWaitHandle"
+        },
+        "Timeout" : "900",
+        "Count" : "0"
+      }
+    },
+    "ConsumerServerScaleUpPolicy" : {
+      "Type" : "AWS::AutoScaling::ScalingPolicy",
+      "Properties" : {
+        "AdjustmentType" : "ChangeInCapacity",
+        "AutoScalingGroupName" : {
+          "Ref" : "ConsumerFleet"
+        },
+        "Cooldown" : "60",
+        "ScalingAdjustment" : "1"
+      }
+    },
+    "ConsumerServerScaleDownPolicy" : {
+      "Type" : "AWS::AutoScaling::ScalingPolicy",
+      "Properties" : {
+        "AdjustmentType" : "ChangeInCapacity",
+        "AutoScalingGroupName" : {
+          "Ref" : "ConsumerFleet"
+        },
+        "Cooldown" : "60",
+        "ScalingAdjustment" : "-1"
+      }
+    },
+    "ConsumerServerCPUAlarmHigh" : {
+      "Type" : "AWS::CloudWatch::Alarm",
+      "Properties" : {
+        "AlarmDescription" : "Scale-up if CPU > 90% for 10 minutes",
+        "MetricName" : "CPUUtilization",
+        "Namespace" : "AWS/EC2",
+        "Statistic" : "Average",
+        "Period" : "60",
+        "EvaluationPeriods" : "10",
+        "Threshold" : "90",
+        "AlarmActions" : [ {
+          "Ref" : "ConsumerServerScaleUpPolicy"
+        } ],
+        "Dimensions" : [ {
+          "Name" : "AutoScalingGroupName",
+          "Value" : {
+            "Ref" : "ConsumerFleet"
+          }
+        } ],
+        "ComparisonOperator" : "GreaterThanThreshold"
+      }
+    },
+    "ConsumerServerCPUAlarmLow" : {
+      "Type" : "AWS::CloudWatch::Alarm",
+      "Properties" : {
+        "AlarmDescription" : "Scale-down if CPU < 20% for 10 minutes",
+        "MetricName" : "CPUUtilization",
+        "Namespace" : "AWS/EC2",
+        "Statistic" : "Average",
+        "Period" : "60",
+        "EvaluationPeriods" : "10",
+        "Threshold" : "20",
+        "AlarmActions" : [ {
+          "Ref" : "ConsumerServerScaleDownPolicy"
+        } ],
+        "Dimensions" : [ {
+          "Name" : "AutoScalingGroupName",
+          "Value" : {
+            "Ref" : "ConsumerFleet"
+          }
+        } ],
+        "ComparisonOperator" : "LessThanThreshold"
+      }
+    },
+    "PrivateElasticLoadBalancer" : {
+      "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties" : {
+        "SecurityGroups" : [ {
+          "Ref" : "PrivateLoadBalancerSecurityGroup"
+        } ],
+        "Subnets" : [ {
+          "Ref" : "PrivateSubnetA"
+        }, {
+          "Ref" : "PrivateSubnetB"
+        }, {
+          "Ref" : "PrivateSubnetC"
+        }, {
+          "Ref" : "PrivateSubnetD"
+        } ],
+        "Listeners" : [ {
+          "LoadBalancerPort" : {
+            "Ref" : "BackendServerPort"
+          },
+          "InstancePort" : {
+            "Ref" : "BackendServerPort"
+          },
+          "Protocol" : "HTTP"
+        } ],
+        "Scheme" : "internal",
+        "HealthCheck" : {
+          "Target" : {
+            "Fn::Join" : [ "", [ "HTTP:", {
+              "Ref" : "BackendServerPort"
+            }, "/healthcheck.html" ] ]
+          },
+          "HealthyThreshold" : "2",
+          "UnhealthyThreshold" : "5",
+          "Interval" : "10",
+          "Timeout" : "5"
+        }
+      }
+    },
+    "PrivateLoadBalancerSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable HTTP access on port 80 for the frontend fleets",
+        "VpcId" : {
+          "Ref" : "VPC"
+        },
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : {
+            "Ref" : "BackendServerPort"
+          },
+          "ToPort" : {
+            "Ref" : "BackendServerPort"
+          },
+          "SourceSecurityGroupId" : {
+            "Ref" : "AdminSecurityGroup"
+          }
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : {
+            "Ref" : "BackendServerPort"
+          },
+          "ToPort" : {
+            "Ref" : "BackendServerPort"
+          },
+          "SourceSecurityGroupId" : {
+            "Ref" : "ConsumerSecurityGroup"
+          }
+        } ],
+        "SecurityGroupEgress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : {
+            "Ref" : "BackendServerPort"
+          },
+          "ToPort" : {
+            "Ref" : "BackendServerPort"
+          },
+          "CidrIp" : "0.0.0.0/0"
+        } ]
+      }
+    },
+    "BackendFleet" : {
+      "Type" : "AWS::AutoScaling::AutoScalingGroup",
+      "Properties" : {
+        "NotificationConfiguration" : {
+          "TopicARN" : {
+            "Ref" : "NotificationTopic"
+          },
+          "NotificationTypes" : [ "autoscaling:EC2_INSTANCE_LAUNCH", "autoscaling:EC2_INSTANCE_LAUNCH_ERROR", "autoscaling:EC2_INSTANCE_TERMINATE", "autoscaling:EC2_INSTANCE_TERMINATE_ERROR" ]
+        },
+        "AvailabilityZones" : [ {
+          "Fn::GetAtt" : [ "PrivateSubnetA", "AvailabilityZone" ]
+        }, {
+          "Fn::GetAtt" : [ "PrivateSubnetB", "AvailabilityZone" ]
+        }, {
+          "Fn::GetAtt" : [ "PrivateSubnetC", "AvailabilityZone" ]
+        }, {
+          "Fn::GetAtt" : [ "PrivateSubnetD", "AvailabilityZone" ]
+        } ],
+        "VPCZoneIdentifier" : [ {
+          "Ref" : "PrivateSubnetA"
+        }, {
+          "Ref" : "PrivateSubnetB"
+        }, {
+          "Ref" : "PrivateSubnetC"
+        }, {
+          "Ref" : "PrivateSubnetD"
+        } ],
+        "LaunchConfigurationName" : {
+          "Ref" : "BackendWebServerLaunchConfig"
+        },
+        "MinSize" : {
+          "Ref" : "FleetMin"
+        },
+        "MaxSize" : {
+          "Ref" : "FleetMax"
+        },
+        "DesiredCapacity" : {
+          "Ref" : "FleetDesired"
+        },
+        "LoadBalancerNames" : [ {
+          "Ref" : "PrivateElasticLoadBalancer"
+        } ],
+        "Tags" : [ {
+          "Key" : "Network",
+          "Value" : "Private",
+          "PropagateAtLaunch" : "true"
+        }, {
+          "Key" : "Name",
+          "Value" : {
+            "Fn::Join" : [ "-", [ {
+              "Ref" : "AWS::StackName"
+            }, "BackendFleet" ] ]
+          },
+          "PropagateAtLaunch" : "true"
+        } ]
+      }
+    },
+    "BackendWebServerLaunchConfig" : {
+      "Type" : "AWS::AutoScaling::LaunchConfiguration",
+      "Metadata" : {
+        "Comment1" : "Configure the Backend server to respond to requests",
+        "AWS::CloudFormation::Authentication" : {
+          "S3AccessCreds" : {
+            "type" : "S3",
+            "accessKeyId" : {
+              "Ref" : "CfnKeys"
+            },
+            "secretKey" : {
+              "Fn::GetAtt" : [ "CfnKeys", "SecretAccessKey" ]
+            },
+            "buckets" : [ {
+              "Ref" : "S3DeploymentBucket"
+            } ]
+          }
+        },
+        "AWS::CloudFormation::Init" : {
+          "config" : {
+            "files" : {
+              "/mnt/IBLogix.war" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "builds/env/gsa/current" ,{
+                    "Fn::FindInMap" : [ "AccountSpecific", {
+                      "Ref" : "AWSAccount"
+                    }, "BackendWAR" ]
+                  } ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/dbmigrator.jar" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "builds/env/gsa/current" ,{
+                    "Fn::FindInMap" : [ "AccountSpecific", {
+                      "Ref" : "AWSAccount"
+                    }, "BackendDBMigrator" ]
+                  } ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/deployer.jar" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "builds/env/gsa/current" ,{
+                    "Fn::FindInMap" : [ "AccountSpecific", {
+                      "Ref" : "AWSAccount"
+                    }, "BackendDeployer" ]
+                  } ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/iblogix_dbconfig.properties" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "iblogix_dbconfig.properties" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/backend.codecheckout.sh" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "backend.codecheckout.sh" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/ssh_keys" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "ssh_keys" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/healthcheck.html" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "healthcheck.html" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/DB_SERVER_HOST" : {
+                "content" : {
+                  "Fn::GetAtt" : [ "DatabaseServer", "Endpoint.Address" ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/FIRSTFUEL_DB_NAME" : {
+                "content" : {
+                    "Ref" : "DatabaseName"
+                  },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/TRANSFORMATION_DB_NAME" : {
+                "content" : {
+                    "Ref" : "TransformationDatabaseName"
+                  },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/.s3cfg" : {
+                "content" : {
+                  "Fn::Join" : [ "", [ "[default]\n", "access_key = ", {
+                    "Ref" : "CfnKeys"
+                  }, "\n", "secret_key = ", {
+                    "Fn::GetAtt" : [ "CfnKeys", "SecretAccessKey" ]
+                  }, "\n", "use_https = True\n" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              }
+            }
+          }
+        }
+      },
+      "Properties" : {
+        "InstanceType" : {
+          "Ref" : "BackEndInstanceType"
+        },
+        "ImageId" : {
+          "Fn::FindInMap" : [ "FirstFuelStack", "BackendApplicationServer", "AMI" ]
+        },
+        "SecurityGroups" : [ {
+          "Ref" : "BackendSecurityGroup"
+        } ],
+        "KeyName" : {
+          "Ref" : "KeyName"
+        },
+        "UserData" : {
+          "Fn::Base64" : {
+            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "# Install the latest version of the CloudFormation bootstrap tools\n", "yum update -y aws-cfn-bootstrap\n", "# Install and configure Backend \n", "/opt/aws/bin/cfn-init -s ", {
+              "Ref" : "AWS::StackName"
+            }, " -r BackendWebServerLaunchConfig ", "    --access-key ", {
+              "Ref" : "CfnKeys"
+            }, "    --secret-key ", {
+              "Fn::GetAtt" : [ "CfnKeys", "SecretAccessKey" ]
+            }, "    --region ", {
+              "Ref" : "AWS::Region"
+            }, "\n", "/bin/sh /mnt/backend.codecheckout.sh\n" ] ]
+          }
+        }
+      }
+    },
+    "BackendSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Allow HTTP access from internal load balancer as well as outbound HTTP and HTTPS traffic",
+        "VpcId" : {
+          "Ref" : "VPC"
+        },
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : {
+            "Ref" : "BackendServerPort"
+          },
+          "ToPort" : {
+            "Ref" : "BackendServerPort"
+          },
+          "SourceSecurityGroupId" : {
+            "Ref" : "PrivateLoadBalancerSecurityGroup"
+          }
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "22",
+          "ToPort" : "22",
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "21",
+          "ToPort" : "21",
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "8080",
+          "ToPort" : "8080",
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "8088",
+          "ToPort" : "8088",
+          "CidrIp" : "0.0.0.0/0"
+        } ],
+        "SecurityGroupEgress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "80",
+          "ToPort" : "80",
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : {
+            "Ref" : "DatabasePort"
+          },
+          "ToPort" : {
+            "Ref" : "DatabasePort"
+          },
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "443",
+          "ToPort" : "443",
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "21",
+          "ToPort" : "21",
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "8080",
+          "ToPort" : "8080",
+          "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "8088",
+          "ToPort" : "8088",
+          "CidrIp" : "0.0.0.0/0"
+        } ]
+      }
+    },
+    "BackendWaitHandle" : {
+      "Type" : "AWS::CloudFormation::WaitConditionHandle"
+    },
+    "BackendWaitCondition" : {
+      "Type" : "AWS::CloudFormation::WaitCondition",
+      "DependsOn" : "BackendFleet",
+      "Properties" : {
+        "Handle" : {
+          "Ref" : "BackendWaitHandle"
+        },
+        "Timeout" : "900",
+        "Count" : "0"
+      }
+    },
+    "BackendServerScaleUpPolicy" : {
+      "Type" : "AWS::AutoScaling::ScalingPolicy",
+      "Properties" : {
+        "AdjustmentType" : "ChangeInCapacity",
+        "AutoScalingGroupName" : {
+          "Ref" : "BackendFleet"
+        },
+        "Cooldown" : "60",
+        "ScalingAdjustment" : "1"
+      }
+    },
+    "BackendServerScaleDownPolicy" : {
+      "Type" : "AWS::AutoScaling::ScalingPolicy",
+      "Properties" : {
+        "AdjustmentType" : "ChangeInCapacity",
+        "AutoScalingGroupName" : {
+          "Ref" : "BackendFleet"
+        },
+        "Cooldown" : "60",
+        "ScalingAdjustment" : "-1"
+      }
+    },
+    "BackendServerCPUAlarmHigh" : {
+      "Type" : "AWS::CloudWatch::Alarm",
+      "Properties" : {
+        "AlarmDescription" : "Scale-up if CPU > 90% for 1 minute",
+        "MetricName" : "CPUUtilization",
+        "Namespace" : "AWS/EC2",
+        "Statistic" : "Average",
+        "Period" : "60",
+        "EvaluationPeriods" : "5",
+        "Threshold" : "10",
+        "AlarmActions" : [ {
+          "Ref" : "BackendServerScaleUpPolicy"
+        } ],
+        "Dimensions" : [ {
+          "Name" : "AutoScalingGroupName",
+          "Value" : {
+            "Ref" : "BackendFleet"
+          }
+        } ],
+        "ComparisonOperator" : "GreaterThanThreshold"
+      }
+    },
+    "BackendServerCPUAlarmLow" : {
+      "Type" : "AWS::CloudWatch::Alarm",
+      "Properties" : {
+        "AlarmDescription" : "Scale-down if CPU < 70% for 10 minutes",
+        "MetricName" : "CPUUtilization",
+        "Namespace" : "AWS/EC2",
+        "Statistic" : "Average",
+        "Period" : "60",
+        "EvaluationPeriods" : "1",
+        "Threshold" : "4",
+        "AlarmActions" : [ {
+          "Ref" : "BackendServerScaleDownPolicy"
+        } ],
+        "Dimensions" : [ {
+          "Name" : "AutoScalingGroupName",
+          "Value" : {
+            "Ref" : "BackendFleet"
+          }
+        } ],
+        "ComparisonOperator" : "LessThanThreshold"
+      }
+    },
+    "DatabaseSubnetGroup" : {
+      "Type" : "AWS::RDS::DBSubnetGroup",
+      "Properties" : {
+        "DBSubnetGroupDescription" : "Subnets available for the RDS DB Instance",
+        "SubnetIds" : [ {
+          "Ref" : "PrivateSubnetA"
+        }, {
+          "Ref" : "PrivateSubnetB"
+        }, {
+          "Ref" : "PrivateSubnetC"
+        }, {
+          "Ref" : "PrivateSubnetD"
+        } ]
+      }
+    },
+    "AdminFleetDBSecurityGroup" : {
+      "Type" : "AWS::RDS::DBSecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Security group for Admin web server fleet access to RDS",
+        "EC2VpcId" : {
+          "Ref" : "VPC"
+        },
+        "DBSecurityGroupIngress" : {
+          "EC2SecurityGroupId" : {
+            "Ref" : "AdminSecurityGroup"
+          }
+        }
+      }
+    },
+    "ConsumerFleetDBSecurityGroup" : {
+      "Type" : "AWS::RDS::DBSecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Security group for Consumer web server fleet access to RDS",
+        "EC2VpcId" : {
+          "Ref" : "VPC"
+        },
+        "DBSecurityGroupIngress" : {
+          "EC2SecurityGroupId" : {
+            "Ref" : "ConsumerSecurityGroup"
+          }
+        }
+      }
+    },
+    "BackendFleetDBSecurityGroup" : {
+      "Type" : "AWS::RDS::DBSecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Security group for Backend  server fleet access to RDS",
+        "EC2VpcId" : {
+          "Ref" : "VPC"
+        },
+        "DBSecurityGroupIngress" : {
+          "EC2SecurityGroupId" : {
+            "Ref" : "BackendSecurityGroup"
+          }
+        }
+      }
+    },
+    "DatabaseServer" : {
+      "Type" : "AWS::RDS::DBInstance",
+      "Properties" : {
+        "AllocatedStorage" : {
+          "Ref" : "DatabaseSize"
+        },
+        "DBInstanceClass" : {
+          "Ref" : "DBInstanceClass"
+        },
+        "BackupRetentionPeriod" : {
+          "Ref" : "DBRetentionPeriod"
+        },
+        "Engine" : "MySQL",
+        "EngineVersion" : "5.5",
+        "MasterUsername" : {
+          "Ref" : "DatabaseUser"
+        },
+        "MultiAZ" : {
+          "Ref" : "MultiAZDatabase"
+        },
+        "MasterUserPassword" : {
+          "Ref" : "DatabasePassword"
+        },
+        "DBSubnetGroupName" : {
+          "Ref" : "DatabaseSubnetGroup"
+        },
+        "Port" : {
+          "Ref" : "DatabasePort"
+        },
+        "DBSnapshotIdentifier" : {
+          "Ref" : "DatabaseSnapshot"
+        },
+        "DBSecurityGroups" : [ {
+          "Ref" : "AdminFleetDBSecurityGroup"
+        }, {
+          "Ref" : "ConsumerFleetDBSecurityGroup"
+        }, {
+          "Ref" : "BackendFleetDBSecurityGroup"
+        } ]
+      }
+    }
+  },
+  "Outputs" : {
+    "AdminLoadbalancer" : {
+      "Description" : "URL of the Admin website",
+      "Value" : {
+        "Fn::Join" : [ "", [ "http://", {
+          "Fn::GetAtt" : [ "AdminWebServerElasticLoadBalancer", "DNSName" ]
+        } ] ]
+      }
+    },
+    "ConsumerLoadbalancer" : {
+      "Description" : "URL of the Consumer website",
+      "Value" : {
+        "Fn::Join" : [ "", [ "http://", {
+          "Fn::GetAtt" : [ "ConsumerWebServerElasticLoadBalancer", "DNSName" ]
+        } ] ]
+      }
+    },
+    "BackendLoadbalancer" : {
+      "Description" : "URL of the Backend website",
+      "Value" : {
+        "Fn::Join" : [ "", [ "http://", {
+          "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
+        } ] ]
+      }
+    }
+  }
+}
