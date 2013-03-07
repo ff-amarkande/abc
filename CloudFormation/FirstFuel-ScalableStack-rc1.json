@@ -47,7 +47,7 @@
     "DatabaseSize" : {
       "Description" : "Database size in GB",
       "Type" : "Number",
-      "Default" : "20"
+      "Default" : "50"
     },
     "DatabaseUser" : {
       "Description" : "Database admin account username",
@@ -85,7 +85,7 @@
     "DatabaseSnapshot" : {
       "Description" : "Snapshot from which to initialize the database",
       "Type" : "String",
-      "Default" : "ssqa29jan"
+      "Default" : "rds:staging-2013-02-21-04-44"
     },
     "MultiAZDatabase" : {
       "Default" : "false",

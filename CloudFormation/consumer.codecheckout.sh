@@ -24,6 +24,10 @@ ln -s $root/frontend/customer $root/main
 #
 chown -R ec2-user:ec2-user $root
 
+cd $root/main
+source /usr/local/rvm/environments/ruby-1.9.2-p320@global
+/usr/local/rvm/gems/ruby-1.9.2-p320@global/bin/bundle install
+
 # Copy the nginx conf file and fire up the Bertie!
 #
 #cp /mnt/nginx.conf /opt/nginx/conf
