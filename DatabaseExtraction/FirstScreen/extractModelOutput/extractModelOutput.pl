@@ -14,7 +14,10 @@ chop($currentTime);
 
 my $fileExtractName = "$ARGV[1]_$currentTime";
 
-my $mysqlCmd = "/usr/local/mysql/bin/mysql -u iblogix -piblogix -h $ARGV[0] $ARGV[1] < $extractModelOpSql > $fileExtractName ";
+my $dataDumpFileName = $fileExtractName.'.out';
+my $dataCsvFileName = $fileExtractName.'.csv';
+
+my $mysqlCmd = "/usr/local/mysql/bin/mysql -u iblogix -piblogix -h $ARGV[0] $ARGV[1] < $extractModelOpSql > $dataDumpFileName";
 
 
 
@@ -26,7 +29,7 @@ if (($#ARGV +1) != 2 ) {
 }
 
 
-print "Data extract will be stored in $fileExtractName \n";
+print "Data extract will be stored in $dataDumpFileName \n";
 
 
 # Run mysql command and extract data
@@ -37,13 +40,13 @@ my @bldNames;
 eval {
    my $op = system($mysqlCmd);
    
-   #print ("sed 's/\t/,/g' $fileExtractName > $fileExtractName.csv");
+   #print ("sed 's/\t/,/g' $dataDumpFileName > $dataCsvFileName");
    
    # convert tab characters to comma   
-   system("sed 's/\t/,/g' $fileExtractName > $fileExtractName.csv");
+   system("sed 's/\t/,/g' $dataDumpFileName > $dataCsvFileName");
    
    #extract building metadata
-   @bldNames = `cut -d ',' -f 1-5 $fileExtractName.csv |sort |uniq`;
+   @bldNames = `cut -d ',' -f 1-5 $dataCsvFileName |sort |uniq`;
 };
 
 if ($@) {
@@ -59,7 +62,7 @@ foreach $buildingInfo (@bldNames) {
  
  my($tenantName, $buildingName, $analysisId, $fromDate, $toDate) = split(',', $buildingInfo);
  
- $buildingName =~ s/\s/_/g;
+ $buildingName =~ s/\W/-/g;
  
  #remove new line character from the toDate 
  chomp($toDate);
@@ -71,7 +74,7 @@ foreach $buildingInfo (@bldNames) {
  `echo "DAY,HOUR,HOURLYABS,WBDBDPABS,NULL,NULL,WINDABS,SUNABS,PRED,ELEC,TEMP,WBULB,DEWPOINT,WINDSPEED,SKY,DAYLIGHTHOUR,HOLIDAY,Date,SolarGHR" > $modelOutputFileName`;
  
  #search by analysis id and grep all the records and append to the model output file.
- my $op = `grep $analysisId $fileExtractName.csv |cut -d ',' -f 6-  |sed 's/NULL//g' >> $modelOutputFileName`;
+ my $op = `grep $analysisId $dataCsvFileName |cut -d ',' -f 6-  |sed 's/NULL//g' >> $modelOutputFileName`;
  
 }
 
