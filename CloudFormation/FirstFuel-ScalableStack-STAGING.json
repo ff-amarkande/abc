@@ -1328,7 +1328,7 @@
                 "source" : {
                   "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
                     "Ref" : "S3DeploymentBucket"
-                  }, "nginx.conf" ] ]
+                  }, "nginx_ssstaging.conf" ] ]
                 },
                 "mode" : "000644",
                 "owner" : "root",
@@ -1348,7 +1348,7 @@
               },
               "/mnt/database.yml" : {
                 "content" : {
-                  "Fn::Join" : [ "", [ "production:\n", "  adapter: mysql2\n", "  encoding: utf8\n", "  database: ", {
+                  "Fn::Join" : [ "", [ "ssstaging:\n", "  adapter: mysql2\n", "  encoding: utf8\n", "  database: ", {
                     "Ref" : "DatabaseName"
                   }, "\n", "  username: ", {
                     "Ref" : "DatabaseUser"
@@ -1364,7 +1364,7 @@
               },
               "/mnt/settings.yml" : {
                 "content" : {
-                  "Fn::Join" : [ "", [ "production:\n", "  aws_access_id: \"AKIAI72HORYSTPXRN6EQ\"\n", "  aws_secret_key: \"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\"\n", {
+                  "Fn::Join" : [ "", [ "ssstaging:\n", "  aws_access_id: \"AKIAI72HORYSTPXRN6EQ\"\n", "  aws_secret_key: \"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\"\n", {
                     "Fn::Join" : [ "", [ "  rest_api_url: \"http://", {
                       "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
                     }, ":", {
@@ -1758,7 +1758,7 @@
                 "source" : {
                   "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
                     "Ref" : "S3DeploymentBucket"
-                  }, "nginx.conf" ] ]
+                  }, "nginx_ssstaging.conf" ] ]
                 },
                 "mode" : "000644",
                 "owner" : "root",
@@ -1778,7 +1778,7 @@
               },
               "/mnt/database.yml" : {
                 "content" : {
-                  "Fn::Join" : [ "", [ "production:\n", "  adapter: mysql2\n", "  encoding: utf8\n", "  database: ", {
+                  "Fn::Join" : [ "", [ "ssstaging:\n", "  adapter: mysql2\n", "  encoding: utf8\n", "  database: ", {
                     "Ref" : "DatabaseName"
                   }, "\n", "  username: ", {
                     "Ref" : "DatabaseUser"
@@ -1794,7 +1794,7 @@
               },
               "/mnt/settings.yml" : {
                 "content" : {
-                  "Fn::Join" : [ "", [ "production:\n", "  aws_access_id: \"AKIAI72HORYSTPXRN6EQ\"\n", "  aws_secret_key: \"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\"\n", {
+                  "Fn::Join" : [ "", [ "ssstaging:\n", "  aws_access_id: \"AKIAI72HORYSTPXRN6EQ\"\n", "  aws_secret_key: \"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\"\n", {
                     "Fn::Join" : [ "", [ "  rest_api_url: \"http://", {
                       "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
                     }, ":", {

@@ -1324,11 +1324,11 @@
               }
             },
             "files" : {
-              "/mnt/nginx_ssqa.conf" : {
+              "/mnt/nginx.conf" : {
                 "source" : {
                   "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
                     "Ref" : "S3DeploymentBucket"
-                  }, "nginx.conf" ] ]
+                  }, "nginx_ssqa.conf" ] ]
                 },
                 "mode" : "000644",
                 "owner" : "root",
@@ -1754,11 +1754,11 @@
                 "owner" : "root",
                 "group" : "root"
               },
-              "/mnt/nginx_ssqa.conf" : {
+              "/mnt/nginx.conf" : {
                 "source" : {
                   "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
                     "Ref" : "S3DeploymentBucket"
-                  }, "nginx.conf" ] ]
+                  }, "nginx_ssqa.conf" ] ]
                 },
                 "mode" : "000644",
                 "owner" : "root",

@@ -1323,11 +1323,11 @@
               }
             },
             "files" : {
-              "/mnt/nginx_qaprod.conf" : {
+              "/mnt/nginx.conf" : {
                 "source" : {
                   "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
                     "Ref" : "S3DeploymentBucket"
-                  }, "nginx.conf" ] ]
+                  }, "nginx_qaprod.conf" ] ]
                 },
                 "mode" : "000644",
                 "owner" : "root",
@@ -1753,11 +1753,11 @@
                 "owner" : "root",
                 "group" : "root"
               },
-              "/mnt/nginx_ssprod.conf" : {
+              "/mnt/nginx.conf" : {
                 "source" : {
                   "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
                     "Ref" : "S3DeploymentBucket"
-                  }, "nginx.conf" ] ]
+                  }, "nginx_qaprod.conf" ] ]
                 },
                 "mode" : "000644",
                 "owner" : "root",
