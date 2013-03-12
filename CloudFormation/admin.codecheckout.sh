@@ -29,6 +29,6 @@ source /usr/local/rvm/environments/ruby-1.9.2-p320@global
 /usr/local/rvm/gems/ruby-1.9.2-p320@global/bin/bundle install
 # Copy the nginx conf file and fire up the Bertie!
 #
-#cp /mnt/nginx.conf /opt/nginx/conf
+cp /mnt/nginx.conf /opt/nginx/conf
 
 /etc/init.d/nginx restart
