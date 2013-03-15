@@ -1421,7 +1421,7 @@
         },
         "UserData" : {
           "Fn::Base64" : {
-            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "yum update -y aws-cfn-bootstrap\n", "/opt/aws/bin/cfn-init -s ", {
+            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "export HISTTIMEFORMAT='%Y-%m-%d %H:%M:%S '\n", "yum update -y aws-cfn-bootstrap\n", "/opt/aws/bin/cfn-init -s ", {
               "Ref" : "AWS::StackName"
             }, " -r AdminWebServerLaunchConfig ", " --access-key ", {
               "Ref" : "CfnKeys"
@@ -1851,7 +1851,7 @@
         },
         "UserData" : {
           "Fn::Base64" : {
-            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "yum update -y aws-cfn-bootstrap\n", "/opt/aws/bin/cfn-init -s ", {
+            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "export HISTTIMEFORMAT='%Y-%m-%d %H:%M:%S '", "yum update -y aws-cfn-bootstrap\n", "/opt/aws/bin/cfn-init -s ", {
               "Ref" : "AWS::StackName"
             }, " -r ConsumerWebServerLaunchConfig ", "    --access-key ", {
               "Ref" : "CfnKeys"
@@ -2294,7 +2294,7 @@
         },
         "UserData" : {
           "Fn::Base64" : {
-            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "# Install the latest version of the CloudFormation bootstrap tools\n", "yum update -y aws-cfn-bootstrap\n", "# Install and configure Backend \n", "/opt/aws/bin/cfn-init -s ", {
+            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "export HISTTIMEFORMAT='%Y-%m-%d %H:%M:%S '", "# Install the latest version of the CloudFormation bootstrap tools\n", "yum update -y aws-cfn-bootstrap\n", "# Install and configure Backend \n", "/opt/aws/bin/cfn-init -s ", {
               "Ref" : "AWS::StackName"
             }, " -r BackendWebServerLaunchConfig ", "    --access-key ", {
               "Ref" : "CfnKeys"
