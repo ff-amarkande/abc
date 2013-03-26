@@ -123,12 +123,12 @@
     "FleetMin" : {
       "Type" : "Number",
       "Description" : "Minimum number of instances in a fleet.",
-      "Default" : "1"
+      "Default" : "2"
     },
     "FleetMax" : {
       "Type" : "Number",
       "Description" : "Maximum number of instances in a fleet.",
-      "Default" : "3"
+      "Default" : "5"
     },
     "FleetDesired" : {
       "Type" : "Number",

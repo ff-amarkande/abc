@@ -85,7 +85,7 @@
     "DatabaseSnapshot" : {
       "Description" : "Snapshot from which to initialize the database",
       "Type" : "String",
-      "Default" : "rds:multi-tenant-2013-03-15-03-13"
+      "Default" : "multi-tenant-before-gas-1-2013-03-20"
     },
     "MultiAZDatabase" : {
       "Default" : "false",
