@@ -1334,6 +1334,26 @@
                 "owner" : "root",
                 "group" : "root"
               },
+              "/etc/nubic/db/dbconfig.yml" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                     "Ref" : "S3DeploymentBucket"
+                  }, "dbconfig.yml" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/var/lib/nubic/db.pass" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "db.pass.ss-qa" ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
               "/mnt/.s3cfg" : {
                 "content" : {
                   "Fn::Join" : [ "", [ "[default]\n", "access_key = ", {
@@ -1341,22 +1361,6 @@
                   }, "\n", "secret_key = ", {
                     "Fn::GetAtt" : [ "CfnKeys", "SecretAccessKey" ]
                   }, "\n", "use_https = True\n" ] ]
-                },
-                "mode" : "000644",
-                "owner" : "root",
-                "group" : "root"
-              },
-              "/mnt/database.yml" : {
-                "content" : {
-                  "Fn::Join" : [ "", [ "ssqa:\n", "  adapter: mysql2\n", "  encoding: utf8\n", "  database: ", {
-                    "Ref" : "DatabaseName"
-                  }, "\n", "  username: ", {
-                    "Ref" : "DatabaseUser"
-                  }, "\n", "  password: ", {
-                    "Ref" : "DatabasePassword"
-                  }, "\n", "  host: ", {
-                    "Fn::GetAtt" : [ "DatabaseServer", "Endpoint.Address" ]
-                  }, "\n" ] ]
                 },
                 "mode" : "000644",
                 "owner" : "root",
@@ -1771,22 +1775,6 @@
                   }, "\n", "secret_key = ", {
                     "Fn::GetAtt" : [ "CfnKeys", "SecretAccessKey" ]
                   }, "\n", "use_https = True\n" ] ]
-                },
-                "mode" : "000644",
-                "owner" : "root",
-                "group" : "root"
-              },
-              "/mnt/database.yml" : {
-                "content" : {
-                  "Fn::Join" : [ "", [ "ssqa:\n", "  adapter: mysql2\n", "  encoding: utf8\n", "  database: ", {
-                    "Ref" : "DatabaseName"
-                  }, "\n", "  username: ", {
-                    "Ref" : "DatabaseUser"
-                  }, "\n", "  password: ", {
-                    "Ref" : "DatabasePassword"
-                  }, "\n", "  host: ", {
-                    "Fn::GetAtt" : [ "DatabaseServer", "Endpoint.Address" ]
-                  }, "\n" ] ]
                 },
                 "mode" : "000644",
                 "owner" : "root",
