@@ -167,6 +167,7 @@
         "BackendWAR" : "IBLogix.war",
         "BackendDBMigrator" : "dbmigrator.jar",
         "BackendDeployer" : "deployer.jar",
+        "IDA" : "firstfuel-ida.jar",
         "AdminBundle" : "frontend-ssadmin.tar.gz",
         "ConsumerBundle" : "frontend-ssconsumer.tar.gz"
       },
@@ -2181,6 +2182,20 @@
                     "Fn::FindInMap" : [ "AccountSpecific", {
                       "Ref" : "AWSAccount"
                     }, "BackendDeployer" ]
+                  } ] ]
+                },
+                "mode" : "000644",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/mnt/firstfuel-ida.jar" : {
+                "source" : {
+                  "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
+                    "Ref" : "S3DeploymentBucket"
+                  }, "current" ,{
+                    "Fn::FindInMap" : [ "AccountSpecific", {
+                       "Ref" : "AWSAccount"
+                    }, "IDA" ]
                   } ] ]
                 },
                 "mode" : "000644",
