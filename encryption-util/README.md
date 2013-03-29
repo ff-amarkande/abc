@@ -7,11 +7,11 @@ to run the utility use below commands
 
 To encrypt the data
 
-java -jar encryption-util.jar {password file name}
+java -jar encryption-util.jar {password file path}
 
 To decrypt the data
 
-java -jar encryption-util.jar {password file name} D
+java -jar encryption-util.jar {password file path} D
 
 
 
