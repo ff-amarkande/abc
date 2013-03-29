@@ -11,7 +11,7 @@ java -jar encryption-util.jar {password file name}
 
 To decrypt the data
 
-java -jar encryption-util.jar {password file name} -D
+java -jar encryption-util.jar {password file name} D
 
 
 
