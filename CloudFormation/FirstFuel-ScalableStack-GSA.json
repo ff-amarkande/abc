@@ -47,7 +47,7 @@
     "DatabaseSize" : {
       "Description" : "Database size in GB",
       "Type" : "Number",
-      "Default" : "20"
+      "Default" : "30"
     },
     "DatabaseUser" : {
       "Description" : "Database admin account username",
@@ -85,7 +85,7 @@
     "DatabaseSnapshot" : {
       "Description" : "Snapshot from which to initialize the database",
       "Type" : "String",
-      "Default" : "rds:coal1-gsa-2012-06-30-2013-01-31-08-03"
+      "Default" : "rds:coal1-gsa-2012-06-30-2013-03-17-08-10"
     },
     "MultiAZDatabase" : {
       "Default" : "false",
@@ -111,7 +111,7 @@
     "FrontEndInstanceType" : {
           "Description" : "EC2 instance type",
           "Type" : "String",
-          "Default" : "m1.medium",
+          "Default" : "m1.large",
           "AllowedValues" : [ "m1.small", "m1.medium", "m1.large", "m1.xlarge", "m2.4xlarge", "c1.medium" ],
           "ConstraintDescription" : "must be a valid (and reasonable) EC2 instance type."
     },
@@ -148,13 +148,13 @@
   "Mappings" : {
     "FirstFuelStack" : {
       "AdminWebServer" : {
-        "AMI" : "ami-6b0e9a02"
+        "AMI" : "ami-a8dc4ac1"
       },
       "ConsumerWebServer" : {
-        "AMI" : "ami-210e9a48"
+        "AMI" : "ami-35d5435c"
       },
       "BackendApplicationServer" : {
-        "AMI" : "ami-ab0d99c2"
+        "AMI" : "ami-92de48fb"
       }
     },
     "AccountSpecific" : {
@@ -1116,6 +1116,11 @@
           "FromPort" : "21",
           "ToPort" : "21",
           "CidrIp" : "0.0.0.0/0"
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "587",
+          "ToPort" : "587",
+          "CidrIp" : "0.0.0.0/0"
         } ],
         "SecurityGroupEgress" : [ {
           "IpProtocol" : "tcp",
@@ -1147,7 +1152,12 @@
           "FromPort" : "21",
           "ToPort" : "21",
           "CidrIp" : "0.0.0.0/0"
-        } ]
+        }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "587",
+          "ToPort" : "587",
+          "CidrIp" : "0.0.0.0/0"
+        }  ]
       }
     },
     "AdminWebServerElasticLoadBalancer" : {
@@ -1329,7 +1339,7 @@
                 "source" : {
                   "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
                     "Ref" : "S3DeploymentBucket"
-                  }, "nginx.conf" ] ]
+                  }, "nginx_gsa.conf" ] ]
                 },
                 "mode" : "000644",
                 "owner" : "root",
@@ -1349,7 +1359,7 @@
               },
               "/mnt/database.yml" : {
                 "content" : {
-                  "Fn::Join" : [ "", [ "production:\n", "  adapter: mysql2\n", "  encoding: utf8\n", "  database: ", {
+                  "Fn::Join" : [ "", [ "gsaproduction:\n", "  adapter: mysql2\n", "  encoding: utf8\n", "  database: ", {
                     "Ref" : "DatabaseName"
                   }, "\n", "  username: ", {
                     "Ref" : "DatabaseUser"
@@ -1365,7 +1375,7 @@
               },
               "/mnt/settings.yml" : {
                 "content" : {
-                  "Fn::Join" : [ "", [ "production:\n", "  aws_access_id: \"AKIAI72HORYSTPXRN6EQ\"\n", "  aws_secret_key: \"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\"\n", {
+                  "Fn::Join" : [ "", [ "gsaproduction:\n", "  aws_access_id: \"AKIAI72HORYSTPXRN6EQ\"\n", "  aws_secret_key: \"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\"\n", {
                     "Fn::Join" : [ "", [ "  rest_api_url: \"http://", {
                       "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
                     }, ":", {
@@ -1422,7 +1432,7 @@
         },
         "UserData" : {
           "Fn::Base64" : {
-            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "yum update -y aws-cfn-bootstrap\n", "/opt/aws/bin/cfn-init -s ", {
+            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "export HISTTIMEFORMAT='%Y-%m-%d %H:%M:%S '\n", "yum update -y aws-cfn-bootstrap\n", "/opt/aws/bin/cfn-init -s ", {
               "Ref" : "AWS::StackName"
             }, " -r AdminWebServerLaunchConfig ", " --access-key ", {
               "Ref" : "CfnKeys"
@@ -1749,7 +1759,7 @@
                 "source" : {
                   "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
                     "Ref" : "S3DeploymentBucket"
-                  }, "nginx.conf" ] ]
+                  }, "nginx_gsa.conf" ] ]
                 },
                 "mode" : "000644",
                 "owner" : "root",
@@ -1759,7 +1769,7 @@
                 "source" : {
                   "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
                     "Ref" : "S3DeploymentBucket"
-                  }, "nginx.conf" ] ]
+                  }, "nginx_gsa.conf" ] ]
                 },
                 "mode" : "000644",
                 "owner" : "root",
@@ -1779,7 +1789,7 @@
               },
               "/mnt/database.yml" : {
                 "content" : {
-                  "Fn::Join" : [ "", [ "production:\n", "  adapter: mysql2\n", "  encoding: utf8\n", "  database: ", {
+                  "Fn::Join" : [ "", [ "gsaproduction:\n", "  adapter: mysql2\n", "  encoding: utf8\n", "  database: ", {
                     "Ref" : "DatabaseName"
                   }, "\n", "  username: ", {
                     "Ref" : "DatabaseUser"
@@ -1795,7 +1805,7 @@
               },
               "/mnt/settings.yml" : {
                 "content" : {
-                  "Fn::Join" : [ "", [ "production:\n", "  aws_access_id: \"AKIAI72HORYSTPXRN6EQ\"\n", "  aws_secret_key: \"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\"\n", {
+                  "Fn::Join" : [ "", [ "gsaproduction:\n", "  aws_access_id: \"AKIAI72HORYSTPXRN6EQ\"\n", "  aws_secret_key: \"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\"\n", {
                     "Fn::Join" : [ "", [ "  rest_api_url: \"http://", {
                       "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
                     }, ":", {
@@ -1852,7 +1862,7 @@
         },
         "UserData" : {
           "Fn::Base64" : {
-            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "yum update -y aws-cfn-bootstrap\n", "/opt/aws/bin/cfn-init -s ", {
+            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "export HISTTIMEFORMAT='%Y-%m-%d %H:%M:%S '\n", "yum update -y aws-cfn-bootstrap\n", "/opt/aws/bin/cfn-init -s ", {
               "Ref" : "AWS::StackName"
             }, " -r ConsumerWebServerLaunchConfig ", "    --access-key ", {
               "Ref" : "CfnKeys"
@@ -2295,7 +2305,7 @@
         },
         "UserData" : {
           "Fn::Base64" : {
-            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "# Install the latest version of the CloudFormation bootstrap tools\n", "yum update -y aws-cfn-bootstrap\n", "# Install and configure Backend \n", "/opt/aws/bin/cfn-init -s ", {
+            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "export HISTTIMEFORMAT='%Y-%m-%d %H:%M:%S '\n", "# Install the latest version of the CloudFormation bootstrap tools\n", "yum update -y aws-cfn-bootstrap\n", "# Install and configure Backend \n", "/opt/aws/bin/cfn-init -s ", {
               "Ref" : "AWS::StackName"
             }, " -r BackendWebServerLaunchConfig ", "    --access-key ", {
               "Ref" : "CfnKeys"

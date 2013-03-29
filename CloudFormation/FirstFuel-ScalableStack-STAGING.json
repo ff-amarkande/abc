@@ -123,12 +123,12 @@
     "FleetMin" : {
       "Type" : "Number",
       "Description" : "Minimum number of instances in a fleet.",
-      "Default" : "1"
+      "Default" : "2"
     },
     "FleetMax" : {
       "Type" : "Number",
       "Description" : "Maximum number of instances in a fleet.",
-      "Default" : "3"
+      "Default" : "5"
     },
     "FleetDesired" : {
       "Type" : "Number",
@@ -1328,7 +1328,7 @@
                 "source" : {
                   "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
                     "Ref" : "S3DeploymentBucket"
-                  }, "nginx.conf" ] ]
+                  }, "nginx_ssstaging.conf" ] ]
                 },
                 "mode" : "000644",
                 "owner" : "root",
@@ -1348,7 +1348,7 @@
               },
               "/mnt/database.yml" : {
                 "content" : {
-                  "Fn::Join" : [ "", [ "production:\n", "  adapter: mysql2\n", "  encoding: utf8\n", "  database: ", {
+                  "Fn::Join" : [ "", [ "ssstaging:\n", "  adapter: mysql2\n", "  encoding: utf8\n", "  database: ", {
                     "Ref" : "DatabaseName"
                   }, "\n", "  username: ", {
                     "Ref" : "DatabaseUser"
@@ -1364,7 +1364,7 @@
               },
               "/mnt/settings.yml" : {
                 "content" : {
-                  "Fn::Join" : [ "", [ "production:\n", "  aws_access_id: \"AKIAI72HORYSTPXRN6EQ\"\n", "  aws_secret_key: \"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\"\n", {
+                  "Fn::Join" : [ "", [ "ssstaging:\n", "  aws_access_id: \"AKIAI72HORYSTPXRN6EQ\"\n", "  aws_secret_key: \"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\"\n", {
                     "Fn::Join" : [ "", [ "  rest_api_url: \"http://", {
                       "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
                     }, ":", {
@@ -1421,7 +1421,7 @@
         },
         "UserData" : {
           "Fn::Base64" : {
-            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "yum update -y aws-cfn-bootstrap\n", "/opt/aws/bin/cfn-init -s ", {
+            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "export HISTTIMEFORMAT='%Y-%m-%d %H:%M:%S '\n", "yum update -y aws-cfn-bootstrap\n", "/opt/aws/bin/cfn-init -s ", {
               "Ref" : "AWS::StackName"
             }, " -r AdminWebServerLaunchConfig ", " --access-key ", {
               "Ref" : "CfnKeys"
@@ -1758,7 +1758,7 @@
                 "source" : {
                   "Fn::Join" : [ "/", [ "https://s3.amazonaws.com", {
                     "Ref" : "S3DeploymentBucket"
-                  }, "nginx.conf" ] ]
+                  }, "nginx_ssstaging.conf" ] ]
                 },
                 "mode" : "000644",
                 "owner" : "root",
@@ -1778,7 +1778,7 @@
               },
               "/mnt/database.yml" : {
                 "content" : {
-                  "Fn::Join" : [ "", [ "production:\n", "  adapter: mysql2\n", "  encoding: utf8\n", "  database: ", {
+                  "Fn::Join" : [ "", [ "ssstaging:\n", "  adapter: mysql2\n", "  encoding: utf8\n", "  database: ", {
                     "Ref" : "DatabaseName"
                   }, "\n", "  username: ", {
                     "Ref" : "DatabaseUser"
@@ -1794,7 +1794,7 @@
               },
               "/mnt/settings.yml" : {
                 "content" : {
-                  "Fn::Join" : [ "", [ "production:\n", "  aws_access_id: \"AKIAI72HORYSTPXRN6EQ\"\n", "  aws_secret_key: \"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\"\n", {
+                  "Fn::Join" : [ "", [ "ssstaging:\n", "  aws_access_id: \"AKIAI72HORYSTPXRN6EQ\"\n", "  aws_secret_key: \"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\"\n", {
                     "Fn::Join" : [ "", [ "  rest_api_url: \"http://", {
                       "Fn::GetAtt" : [ "PrivateElasticLoadBalancer", "DNSName" ]
                     }, ":", {
@@ -1851,7 +1851,7 @@
         },
         "UserData" : {
           "Fn::Base64" : {
-            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "yum update -y aws-cfn-bootstrap\n", "/opt/aws/bin/cfn-init -s ", {
+            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "export HISTTIMEFORMAT='%Y-%m-%d %H:%M:%S '\n",  "yum update -y aws-cfn-bootstrap\n", "/opt/aws/bin/cfn-init -s ", {
               "Ref" : "AWS::StackName"
             }, " -r ConsumerWebServerLaunchConfig ", "    --access-key ", {
               "Ref" : "CfnKeys"
@@ -2294,7 +2294,7 @@
         },
         "UserData" : {
           "Fn::Base64" : {
-            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "# Install the latest version of the CloudFormation bootstrap tools\n", "yum update -y aws-cfn-bootstrap\n", "# Install and configure Backend \n", "/opt/aws/bin/cfn-init -s ", {
+            "Fn::Join" : [ "", [ "#!/bin/bash -v\n", "export HISTTIMEFORMAT='%Y-%m-%d %H:%M:%S '\n", "# Install the latest version of the CloudFormation bootstrap tools\n", "yum update -y aws-cfn-bootstrap\n", "# Install and configure Backend \n", "/opt/aws/bin/cfn-init -s ", {
               "Ref" : "AWS::StackName"
             }, " -r BackendWebServerLaunchConfig ", "    --access-key ", {
               "Ref" : "CfnKeys"
