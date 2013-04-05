@@ -5,13 +5,19 @@ This is a utility which can be used to encrypt/decrypt the data used in backend 
 
 to run the utility use below commands 
 
-To encrypt the data
+1)To encrypt the data (Single property value)
 
-java -jar encryption-util.jar {password file path}
+java -jar encryption-util-jar-with-dependencies.jar {password file path} E
 
-To decrypt the data
+2)To decrypt the data (Single property value)
 
-java -jar encryption-util.jar {password file path} D
+java -jar encryption-util-jar-with-dependencies.jar {password file path} D
 
+3)To Encrypt whole file
 
+java -jar encryption-util-jar-with-dependencies.jar {password file path} E {encrypting file path}
+
+4)To Decrypt whole file
+
+java -jar encryption-util-jar-with-dependencies.jar {password file path} E {decrypting file path}
 
